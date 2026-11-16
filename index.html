@@ -200,6 +200,20 @@ details[open] summary{margin-bottom:10px}
 .opt .ot{min-width:0;overflow-wrap:anywhere}
 .opt .cnt{margin-left:auto;font:800 24px var(--f-num);background:rgba(10,17,48,.16);border-radius:10px;padding:2px 10px}
 .o-gold{--c:var(--gold)}.o-lotus{--c:var(--lotus)}.o-jade{--c:var(--jade)}.o-sky{--c:var(--sky)}
+button.opt{cursor:pointer}
+button.opt:hover{filter:brightness(1.07)}
+button.opt:active{transform:scale(.99)}
+.opt .hp{margin-left:auto;font:700 13px/1 var(--f-body);background:var(--ink);color:var(--gold-soft);border-radius:999px;padding:6px 10px;white-space:nowrap}
+.opt .hp+.cnt{margin-left:8px}
+.host-play{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border:1px dashed var(--line);border-radius:14px;background:var(--panel);font-size:16px}
+.host-play .who{font-weight:700;color:var(--gold-soft);letter-spacing:.06em}
+.host-play form{display:flex;gap:10px;flex:1 1 280px;min-width:0}
+.host-play input{flex:1;min-width:0;font:700 20px var(--f-display);padding:8px 12px}
+.host-play .ok{color:var(--ok);font-weight:700}
+.host-play .bad{color:var(--bad)}
+.hp-note{color:var(--muted);font-size:14px}
+.hp-note.bad{color:var(--bad)}
+.pchip.host{border-color:var(--gold);padding-right:14px}
 .opts.revealed .opt.wrong{opacity:.25}
 .opts.revealed .opt.right{box-shadow:0 0 0 4px var(--text),0 0 34px var(--c)}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -384,6 +398,10 @@ details[open] summary{margin-bottom:10px}
             <div class="seg" id="start-seg" data-key="start"><button type="button" data-v="intro">從頭（前奏）</button><button type="button" data-v="random">隨機片段</button></div>
           </div>
           <label class="toggle only-phone"><input type="checkbox" id="auto-reveal"><span>全部人答完就自動揭曉</span></label>
+          <div class="field only-phone">
+            <label class="toggle"><input type="checkbox" id="host-plays"><span>主持人也一起答題</span></label>
+            <p class="seg-desc" id="host-plays-desc"></p>
+          </div>
           <div class="field only-live"><label class="label" for="teams">隊伍（一行一隊）</label><textarea id="teams" rows="4"></textarea></div>
           <label class="toggle only-live"><input type="checkbox" id="live-choices"><span>在大螢幕上顯示四個選項</span></label>
           <div class="pool-sum" id="pool-sum" aria-live="polite"></div>
@@ -428,6 +446,7 @@ details[open] summary{margin-bottom:10px}
             </div>
           </div>
           <div class="opts" id="host-opts"></div>
+          <div class="host-play" id="host-play" hidden></div>
           <div class="controls">
             <button type="button" class="btn btn-primary" id="c-reveal">揭曉答案</button>
             <button type="button" class="btn btn-primary" id="c-next">下一題</button>
@@ -435,7 +454,7 @@ details[open] summary{margin-bottom:10px}
             <button type="button" class="btn" id="c-replay">重聽片段</button>
             <button type="button" class="btn btn-ghost" id="c-skip">跳過這首</button>
             <button type="button" class="btn btn-ghost" id="c-end">結束遊戲</button>
-            <span class="keys">快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽</span>
+            <span class="keys" id="keys">快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽</span>
           </div>
         </div>
         <aside class="panel side"><h3 id="side-title">作答狀況</h3><div id="side-body"></div></aside>
@@ -578,7 +597,7 @@ function cleanTitle(t){
 }
 
 // ---------- 設定與題庫 ----------
-const DEFAULTS={useZs:true,cats:[2,3,4,5,6,7],off:[],ver:'orig',useCustom:false,mode:'choice',rounds:10,time:20,start:'intro',autoReveal:true,teams:'第一組\n第二組\n第三組\n第四組',liveChoices:false};
+const DEFAULTS={useZs:true,cats:[2,3,4,5,6,7],off:[],ver:'orig',useCustom:false,mode:'choice',rounds:10,time:20,start:'intro',autoReveal:true,teams:'第一組\n第二組\n第三組\n第四組',liveChoices:false,hostPlays:false};
 const S=Object.assign({},DEFAULTS,store.get('settings',{}));
 const saveS=()=>store.set('settings',S);
 let custom=store.get('custom',[]).filter(c=>c&&c.src&&c.url);
@@ -700,6 +719,8 @@ function renderSetup(){
   $('#auto-reveal').checked=S.autoReveal;$('#live-choices').checked=S.liveChoices;
   if(document.activeElement!==$('#teams'))$('#teams').value=S.teams;
   $$('.only-live').forEach(e=>{e.hidden=S.mode!=='live'});$$('.only-phone').forEach(e=>{e.hidden=S.mode==='live'});
+  $('#host-plays').checked=S.hostPlays;
+  $('#host-plays-desc').textContent=(S.mode==='type'?'主持人在這台電腦上打歌名作答':'主持人在這台電腦上點選項（或按 1～4）作答')+'，和大家一起排名。沒有其他玩家也能開始，等於一個人練習。'+(S.mode==='type'?'打字模式時，大家看得到主持人打的字；想公平比賽，主持人可以改用手機加入。':'');
   renderZsList();renderCustom();renderPoolSum();
 }
 function renderZsList(){
@@ -742,6 +763,7 @@ function initSetup(){
   $('#time').onchange=e=>{S.time=+e.target.value;saveS();renderPoolSum()};
   $('#auto-reveal').onchange=e=>{S.autoReveal=e.target.checked;saveS()};
   $('#live-choices').onchange=e=>{S.liveChoices=e.target.checked;saveS();renderPoolSum()};
+  $('#host-plays').onchange=e=>{S.hostPlays=e.target.checked;saveS();renderPoolSum()};
   $('#teams').oninput=e=>{S.teams=e.target.value;saveS()};
   $('#zs-list').onchange=e=>{const c=e.target.closest('[data-zs]');if(!c)return;const t=ZS[+c.dataset.zs][0];S.off=c.checked?S.off.filter(x=>x!==t):[...S.off.filter(x=>x!==t),t];saveS();renderPoolSum()};
   $('#zs-all').onclick=()=>{S.off=[];saveS();renderZsList();renderPoolSum()};
@@ -990,10 +1012,43 @@ async function createRoom(){
     if(!H.teams.length)H.teams=[{id:'t0',name:'大家',score:0}];
     startGame();return;
   }
-  if(typeof Peer==='undefined'){toast('連線元件沒有載入（可能沒有網路）。可以先改用「現場搶答」。',6000);return}
+  if(typeof Peer==='undefined'){
+    if(S.hostPlays){toast('連線元件沒有載入，先改成主持人一個人玩。',6000);syncHostPlayer();startGame();return}
+    toast('連線元件沒有載入（可能沒有網路）。可以先改用「現場搶答」。',6000);return;
+  }
   if(H.peer&&!H.peer.destroyed){showLobby();return}
   const b=$('#create-room');b.disabled=true;b.textContent='建立中…';
-  try{await openHostPeer(0);showLobby()}catch(e){toast('建立房間失敗：'+e.message,6000)}finally{renderPoolSum()}
+  try{await openHostPeer(0);showLobby()}
+  catch(e){
+    if(S.hostPlays){toast('建立房間失敗，先改成主持人一個人玩：'+e.message,6000);syncHostPlayer();startGame()}
+    else toast('建立房間失敗：'+e.message,6000);
+  }finally{renderPoolSum()}
+}
+// 主持人也一起答題：當成一位沒有連線的玩家（pid = 'host'）
+function syncHostPlayer(){
+  const want=S.hostPlays&&S.mode!=='live';
+  if(want&&!H.players.has('host'))H.players.set('host',{pid:'host',name:uniqueName('主持人','host'),score:0,ans:{},gain:0,online:true,conn:null,joinedAt:0,isHost:true});
+  else if(!want)H.players.delete('host');
+}
+function hostAnswer(i){
+  const p=H.players.get('host');if(!p||S.mode!=='choice')return;
+  onAnswer(p,{idx:H.idx,choice:i});renderHostOpts();renderHostPlay();
+}
+function hostGuess(text){
+  const p=H.players.get('host');if(!p||S.mode!=='type')return;
+  onGuess(p,{idx:H.idx,text});renderHostPlay();
+}
+function renderHostPlay(){
+  const box=$('#host-play');const hp=H.players.get('host');
+  const on=!!hp&&!H.live&&(H.phase==='question'||H.phase==='reveal');
+  box.hidden=!on;if(!on){box.innerHTML='';return}
+  const a=hp.ans[H.idx];const who=`<span class="who">${esc(hp.name)}</span>`;
+  if(H.phase==='reveal'){box.innerHTML=who+(a&&a.correct?`<span class="ok">答對了！+${a.points}</span>`:`<span class="bad">${a?'沒答對':'沒有作答'}</span>`);return}
+  if(S.mode==='choice'){box.innerHTML=who+`<span>${a?'已作答，等待揭曉…':(H.q&&H.q.timeUp?'時間到':'點上面的選項，或按鍵盤 1～4 作答')}</span>`;return}
+  if(a&&a.correct){box.innerHTML=who+'<span class="ok">答對了！揭曉後計分</span>';return}
+  if(a&&a.tries>=3){box.innerHTML=who+'<span class="bad">3 次機會用完了</span>';return}
+  if(!$('#host-guess'))box.innerHTML=who+'<form id="host-form"><input id="host-guess" autocomplete="off" maxlength="40" placeholder="輸入歌名，按 Enter 送出" aria-label="主持人的答案"><button class="btn btn-primary" type="submit">送出</button></form><span class="hp-note" id="hp-note"></span>';
+  const note=$('#hp-note');note.textContent=a&&a.tries?`不對，還有 ${3-a.tries} 次機會`:'每題可以猜 3 次';note.className='hp-note'+(a&&a.tries?' bad':'');
 }
 function joinUrl(){return location.href.split(/[?#]/)[0]+'?room='+H.code}
 function showLobby(){
@@ -1001,13 +1056,13 @@ function showLobby(){
   $('#room-code').textContent=H.code;$('#join-url').textContent=url;
   try{const qr=qrcode(0,'M');qr.addData(url);qr.make();$('#qr').innerHTML=qr.createSvgTag({cellSize:6,margin:2,scalable:true});$('#qr').hidden=false}catch(e){$('#qr').hidden=true}
   $('#file-warn').hidden=location.protocol!=='file:';
-  $('#lobby-sum').textContent=`${MODE_DESC[S.mode].split('，')[0].replace(/。$/,'')} · ${Math.min(S.rounds,buildPool().length)} 題 · 每題 ${S.time} 秒`;
-  H.phase='lobby';show('s-lobby');renderLobby();broadcast();
+  $('#lobby-sum').textContent=`${MODE_DESC[S.mode].split('，')[0].replace(/。$/,'')} · ${Math.min(S.rounds,buildPool().length)} 題 · 每題 ${S.time} 秒${S.hostPlays?' · 主持人一起答題（沒有其他人也能開始）':''}`;
+  syncHostPlayer();H.phase='lobby';show('s-lobby');renderLobby();broadcast();
 }
 function renderLobby(){
   const ps=[...H.players.values()];
   $('#lobby-n').textContent=ps.filter(p=>p.online).length;
-  $('#lobby-players').innerHTML=ps.length?ps.map(p=>`<li class="pchip ${p.online?'':'off'}" style="--c:${colorFor(p.pid)}"><span class="dot"></span>${esc(p.name)}<button type="button" data-kick="${esc(p.pid)}" aria-label="移除 ${esc(p.name)}" title="移除">✕</button></li>`).join(''):'<li class="empty">還沒有人加入。請大家用手機掃描左邊的 QR code。</li>';
+  $('#lobby-players').innerHTML=(ps.length?ps.map(p=>p.isHost?`<li class="pchip host" style="--c:var(--gold)"><span class="dot"></span>${esc(p.name)}</li>`:`<li class="pchip ${p.online?'':'off'}" style="--c:${colorFor(p.pid)}"><span class="dot"></span>${esc(p.name)}<button type="button" data-kick="${esc(p.pid)}" aria-label="移除 ${esc(p.name)}" title="移除">✕</button></li>`).join(''):'')+(ps.some(p=>!p.isHost)?'':'<li class="empty">還沒有人加入。請大家用手機掃描左邊的 QR code。</li>');
   $('#start-game').disabled=!ps.some(p=>p.online);
 }
 function renderPlayersUI(){const scr=document.body.dataset.screen;if(scr==='s-lobby')renderLobby();else if(scr==='s-game')renderSide();renderTop()}
@@ -1015,13 +1070,14 @@ function renderTop(){
   const el=$('#top-right');const scr=document.body.dataset.screen;
   if(!['s-lobby','s-game','s-final'].includes(scr)){el.innerHTML='';return}
   if(H.live){el.innerHTML='<span class="pill">現場搶答</span>';return}
+  if(!H.code){el.innerHTML='<span class="pill">一個人練習</span>';return}
   const on=[...H.players.values()].filter(p=>p.online).length;
   el.innerHTML=`<span class="pill">房號 <b>${esc(H.code)}</b></span><span class="pill"><b>${on}</b>人在線</span>`;
 }
 
 function startGame(){
   H.rounds=makeRounds();if(!H.rounds.length){toast('題庫是空的');return}
-  H.T=S.time*1000;H.idx=-1;H.fails=0;
+  H.T=S.time*1000;H.idx=-1;H.fails=0;syncHostPlayer();
   H.players.forEach(p=>{p.score=0;p.ans={};p.gain=0});H.teams.forEach(t=>{t.score=0});
   Engine.unlock();wakeLock();
   window.onbeforeunload=e=>{e.preventDefault();e.returnValue=''};
@@ -1090,7 +1146,7 @@ function renderGame(){
     const meta=r.song.src==='zs'?`${CAT_NAME[r.song.cat]} · ${r.version==='piano'?'鋼琴演奏版':'原唱'}`:'自訂音檔';
     $('#plaque').innerHTML=`<span class="eyebrow">${esc(meta)}</span><h2>${esc(r.song.title)}</h2>${r.song.src==='zs'?`<a href="${ZS_PAGE}${esc(r.song.page)}" target="_blank" rel="noopener">到官網看歌詞與簡譜 ↗</a>`:''}`;
   }
-  renderHostOpts();renderControls();renderSide();updateTimer();renderTop();
+  renderHostOpts();renderHostPlay();renderControls();renderSide();updateTimer();renderTop();
 }
 function renderHostOpts(){
   const r=H.rounds[H.idx];const box=$('#host-opts');
@@ -1098,11 +1154,19 @@ function renderHostOpts(){
   box.hidden=!showOpts;if(!showOpts){box.innerHTML='';return}
   const rev=H.phase==='reveal';const counts=r.options.map(()=>0);
   if(S.mode==='choice'&&!H.live)H.players.forEach(p=>{const a=p.ans[H.idx];if(a&&a.choice!=null)counts[a.choice]++});
+  // 主持人一起玩時，選項可以直接點；作答後不標出選了哪個，揭曉時才顯示
+  const hp=H.live?null:H.players.get('host');const ha=hp&&hp.ans[H.idx];
+  const canPick=!!hp&&S.mode==='choice'&&H.phase==='question'&&!ha&&!(H.q&&H.q.timeUp);
   box.className='opts'+(rev?' revealed':'');
-  box.innerHTML=r.options.map((o,i)=>`<div class="opt ${OPT_CLASS[i]} ${rev?(o===r.song.title?'right':'wrong'):''}">${SHAPES[i]}<span class="ot">${esc(o)}</span>${rev&&!H.live?`<span class="cnt">${counts[i]}</span>`:''}</div>`).join('');
+  box.innerHTML=r.options.map((o,i)=>{
+    const cls=`opt ${OPT_CLASS[i]} ${rev?(o===r.song.title?'right':'wrong'):''}`;
+    const inner=`${SHAPES[i]}<span class="ot">${esc(o)}</span>${rev&&ha&&ha.choice===i?`<span class="hp">${esc(hp.name)}</span>`:''}${rev&&!H.live?`<span class="cnt">${counts[i]}</span>`:''}`;
+    return canPick?`<button type="button" class="${cls}" data-host-choice="${i}" aria-label="${esc(hp.name)}選「${esc(o)}」（按 ${i+1}）">${inner}</button>`:`<div class="${cls}">${inner}</div>`;
+  }).join('');
 }
 function renderControls(){
   const ph=H.phase;const media=ph==='question'||ph==='reveal';
+  $('#keys').textContent='快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽'+(!H.live&&H.players.has('host')&&S.mode==='choice'?' · 1～4 主持人作答':'');
   $('#c-pause').hidden=!media;$('#c-pause').textContent=Engine.playing?'暫停':'繼續播放';
   $('#c-replay').hidden=!media;
   $('#c-reveal').hidden=ph!=='question';
@@ -1116,7 +1180,9 @@ function updateTimer(){
   else if(H.phase==='question'&&q){
     if(q.timeUp)status=H.live?'時間到！按「揭曉答案」':'時間到';
     else if(!Engine.playing)status='已暫停';
-    else status=H.live?'聽出來的人，大聲說出歌名！':'仔細聽，用手機作答';
+    else if(H.live)status='聽出來的人，大聲說出歌名！';
+    else if(H.players.has('host')&&![...H.players.values()].some(p=>!p.isHost))status=S.mode==='choice'?'仔細聽，點下面的選項作答':'仔細聽，在下面輸入歌名';
+    else status='仔細聽，用手機作答';
   }
   $('#veil-status').textContent=status;
   st.classList.toggle('playing',Engine.playing&&H.phase==='question');
@@ -1162,11 +1228,18 @@ function initHostControls(){
   $('#c-next').onclick=nextRound;
   $('#c-skip').onclick=()=>{H.fails=0;nextRound()};
   $('#c-end').onclick=e=>{const b=e.currentTarget;if(b.dataset.armed){delete b.dataset.armed;b.textContent='結束遊戲';finish();return}b.dataset.armed='1';b.textContent='再按一次結束';setTimeout(()=>{delete b.dataset.armed;b.textContent='結束遊戲'},3000)};
+  $('#host-opts').onclick=e=>{const b=e.target.closest('[data-host-choice]');if(b)hostAnswer(Number(b.dataset.hostChoice))};
+  $('#host-play').addEventListener('submit',e=>{e.preventDefault();const inp=$('#host-guess');if(!inp)return;const v=inp.value.trim();if(!v)return;inp.value='';hostGuess(v);const again=$('#host-guess');if(again)again.focus()});
   $('#side-body').onclick=e=>{const b=e.target.closest('[data-team]');if(!b)return;const t=H.teams.find(x=>x.id===b.dataset.team);if(!t)return;t.score=Math.max(0,t.score+Number(b.dataset.d));renderSide()};
   $('#again').onclick=()=>{if(!H.live&&!H.players.size){showLobby();return}startGame()};
   $('#to-setup').onclick=()=>{H.phase='lobby';broadcast();renderSetup();show('s-setup')};
   document.addEventListener('keydown',e=>{
     if(document.body.dataset.screen!=='s-game'||e.target.closest('input,textarea,select,button,a'))return;
+    if(/^[1-4]$/.test(e.key)){
+      const r=H.rounds[H.idx];const i=Number(e.key)-1;
+      if(!H.live&&H.players.has('host')&&S.mode==='choice'&&H.phase==='question'&&r&&i<r.options.length){e.preventDefault();hostAnswer(i)}
+      return;
+    }
     if(e.key===' '){if(H.phase==='question'||H.phase==='reveal'){e.preventDefault();togglePause()}}
     else if(e.key==='Enter'){if(H.phase==='question'){e.preventDefault();reveal()}else if(H.phase==='reveal'){e.preventDefault();nextRound()}}
     else if(e.key==='r'||e.key==='R'){if(H.phase==='question'||H.phase==='reveal')$('#c-replay').click()}
