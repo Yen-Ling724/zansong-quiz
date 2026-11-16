@@ -200,6 +200,33 @@ details[open] summary{margin-bottom:10px}
 .prog{fill:none;stroke:var(--gold);stroke-width:4;stroke-linecap:round;stroke-dasharray:0 100;transition:stroke-dasharray .2s linear}
 .timer-num{position:absolute;inset:0;display:grid;place-items:center;font:800 clamp(40px,7vh,66px)/1 var(--f-num);font-variant-numeric:tabular-nums}
 .veil-status{font-size:clamp(16px,2vw,20px);color:var(--muted);text-align:center;min-height:1.6em}
+.veil-status.callout{font:700 clamp(24px,3.4vw,40px)/1.3 var(--f-display);color:var(--gold-soft);animation:pop .3s ease-out}
+/* 搶答鈴：大螢幕上的搶答順序 */
+.buzz-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.bz-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bz-actions{display:flex;gap:10px}
+.bz-ok{background:var(--ok);border-color:var(--ok);color:#04261a;font-size:18px;min-width:110px}
+.bz-no{background:var(--bad);border-color:var(--bad);color:#3a0606;font-size:18px;min-width:110px}
+.bz-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.bz-list li{display:grid;grid-template-columns:40px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:8px 12px;border-radius:12px;background:var(--night);border:1px solid transparent}
+.bz-list b{font:800 22px var(--f-num);text-align:center;color:var(--muted)}
+.bz-list .nm{font:700 clamp(18px,2vw,24px)/1.2 var(--f-display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bz-list small{font:600 14px var(--f-num);color:var(--muted)}
+.bz-list .tag{font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--panel-2);color:var(--muted);white-space:nowrap}
+.bz-list li.answering{border-color:var(--gold);background:var(--panel-2)}
+.bz-list li.answering b,.bz-list li.answering .tag{color:var(--gold-soft)}
+.bz-list li.correct{border-color:var(--ok)}
+.bz-list li.correct .tag{color:var(--ok)}
+.bz-list li.wrong{opacity:.55}
+.bz-list li.wrong .tag{color:var(--bad)}
+/* 搶答鈴：手機上的大按鈕 */
+.buzz-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding-block:10px}
+.buzz-btn{width:min(250px,68vw);aspect-ratio:1;border-radius:50%;border:0;background:radial-gradient(circle at 50% 35%,var(--gold-soft),var(--gold) 60%,#d8962a);color:var(--on-gold);font:700 clamp(44px,13vw,60px)/1 var(--f-display);letter-spacing:.06em;box-shadow:0 10px 0 #a86f17,0 18px 40px rgba(244,180,67,.35);cursor:pointer;transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.buzz-btn:active{transform:translateY(8px);box-shadow:0 2px 0 #a86f17,0 8px 20px rgba(244,180,67,.3)}
+.buzz-btn:disabled{opacity:.6;cursor:default}
+.order-big{font:800 96px/1 var(--f-num);color:var(--gold-soft)}
+.result.turn{border-color:var(--gold);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(244,180,67,.18)}}
 .stage.playing .lt .petals{animation:breathe 2.6s ease-in-out infinite}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .opt{--c:var(--gold);display:flex;align-items:center;gap:14px;min-height:72px;padding:14px 18px;border-radius:16px;background:var(--c);color:var(--ink);font:700 clamp(19px,2.3vw,30px)/1.2 var(--f-display);border:0;text-align:left;transition:opacity .3s,box-shadow .3s,transform .12s;min-width:0}
@@ -396,7 +423,7 @@ button.opt:active{transform:scale(.99)}
         <div class="panel">
           <h2>玩法</h2>
           <div class="field">
-            <div class="seg" id="mode-seg" data-key="mode"><button type="button" data-v="choice">手機選擇題</button><button type="button" data-v="type">手機打字</button><button type="button" data-v="live">現場搶答</button></div>
+            <div class="seg" id="mode-seg" data-key="mode"><button type="button" data-v="choice">手機選擇題</button><button type="button" data-v="type">手機打字</button><button type="button" data-v="buzz">手機搶答鈴</button><button type="button" data-v="live">現場搶答</button></div>
             <p class="seg-desc" id="mode-desc"></p>
           </div>
           <div class="grid2">
@@ -407,13 +434,13 @@ button.opt:active{transform:scale(.99)}
             <span class="label">從哪裡開始播</span>
             <div class="seg" id="start-seg" data-key="start"><button type="button" data-v="intro">從頭（前奏）</button><button type="button" data-v="random">隨機片段</button></div>
           </div>
-          <label class="toggle only-phone"><input type="checkbox" id="auto-reveal"><span>全部人答完就自動揭曉</span></label>
-          <div class="field only-phone">
+          <label class="toggle" data-modes="choice type"><input type="checkbox" id="auto-reveal"><span>全部人答完就自動揭曉</span></label>
+          <div class="field" data-modes="choice type">
             <label class="toggle"><input type="checkbox" id="host-plays"><span>主持人也一起答題</span></label>
             <p class="seg-desc" id="host-plays-desc"></p>
           </div>
-          <div class="field only-live"><label class="label" for="teams">隊伍（一行一隊）</label><textarea id="teams" rows="4"></textarea></div>
-          <label class="toggle only-live"><input type="checkbox" id="live-choices"><span>在大螢幕上顯示四個選項</span></label>
+          <div class="field" data-modes="live"><label class="label" for="teams">隊伍（一行一隊）</label><textarea id="teams" rows="4"></textarea></div>
+          <label class="toggle" data-modes="live buzz"><input type="checkbox" id="live-choices"><span>在大螢幕上顯示四個選項（當提示）</span></label>
           <div class="pool-sum" id="pool-sum" aria-live="polite"></div>
           <button type="button" class="btn btn-primary btn-xl wide" id="create-room">建立房間</button>
         </div>
@@ -457,6 +484,7 @@ button.opt:active{transform:scale(.99)}
           </div>
           <div class="opts" id="host-opts"></div>
           <div class="host-play" id="host-play" hidden></div>
+          <div class="buzz-panel" id="buzz-panel" hidden></div>
           <div class="controls">
             <button type="button" class="btn btn-primary" id="c-reveal">揭曉答案</button>
             <button type="button" class="btn btn-primary" id="c-next">下一題</button>
@@ -515,6 +543,7 @@ const PEER_PREFIX='zansong-guess-v1-';
 const MODE_DESC={
   choice:'大家用手機四選一，答對且越快，分數越高（500～1000 分）。',
   type:'大家用手機打出歌名，每題可以猜 3 次。數字、標點不用管，長歌名打錯一個字也算對。',
+  buzz:'大家用手機按「搶答」，最先按的是回答順序 1，音樂會自動暫停讓他說出歌名。主持人判斷對錯：答錯就換回答順序 2，依此類推。越早按、答對分數越高。一隊共用一支手機也可以。',
   live:'不用手機。主持人播歌、大家喊答案，主持人幫答對的隊伍加分。'
 };
 const VER_DESC={orig:'播放原唱。',piano:'只用有鋼琴演奏版的歌（34 首），沒有歌詞，比較難。',mix:'有鋼琴版的歌，隨機播原唱或鋼琴版。'};
@@ -728,7 +757,7 @@ function renderSetup(){
   $('#rounds').value=String(S.rounds);$('#time').value=String(S.time);
   $('#auto-reveal').checked=S.autoReveal;$('#live-choices').checked=S.liveChoices;
   if(document.activeElement!==$('#teams'))$('#teams').value=S.teams;
-  $$('.only-live').forEach(e=>{e.hidden=S.mode!=='live'});$$('.only-phone').forEach(e=>{e.hidden=S.mode==='live'});
+  $$('[data-modes]').forEach(e=>{e.hidden=!e.dataset.modes.split(' ').includes(S.mode)});
   $('#host-plays').checked=S.hostPlays;
   $('#host-plays-desc').textContent=(S.mode==='type'?'主持人在這台電腦上打歌名作答':'主持人在這台電腦上點選項（或按 1～4）作答')+'，和大家一起排名。沒有其他玩家也能開始，等於一個人練習。'+(S.mode==='type'?'打字模式時，大家看得到主持人打的字；想公平比賽，主持人可以改用手機加入。':'');
   renderZsList();renderCustom();renderPoolSum();
@@ -754,7 +783,7 @@ function renderPoolSum(){
   const okCustom=custom.filter(c=>(c.title||'').trim()&&!c.loading).length;
   $('#zs-count').textContent=S.useZs?`${zs} 首`:'';
   $('#custom-count').textContent=custom.length?`${okCustom} 首`:'';
-  const needOpts=S.mode==='choice'||(S.mode==='live'&&S.liveChoices);
+  const needOpts=S.mode==='choice'||((S.mode==='live'||S.mode==='buzz')&&S.liveChoices);
   let warn='';
   if(n<2)warn='題庫至少要 2 首歌。';
   else if(needOpts&&n<4)warn='題庫少於 4 首，選項會不到 4 個。';
@@ -793,7 +822,7 @@ const Engine={
   yt:null,ytApiP:null,ytReadyP:null,ytWait:null,
   sp:null,spApiP:null,spReady:null,spStarted:false,spNeedSeek:false,spMode:'intro',spFixed:null,spDur:0,
   init(){for(let i=0;i<2;i++){const a=new Audio();a.preload='auto';this.els.push(a)}},
-  unlock(){const s=silentWav();this.els.forEach(a=>{if(a.dataset.src)return;a.src=s;a.muted=true;const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.muted=false}).catch(()=>{a.muted=false})})},
+  unlock(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();actx.resume()}catch(e){}const s=silentWav();this.els.forEach(a=>{if(a.dataset.src)return;a.src=s;a.muted=true;const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.muted=false}).catch(()=>{a.muted=false})})},
   kindOf(r){return r.song.src==='zs'||r.song.src==='mp3'?'mp3':r.song.src},
   async prepare(r,mode,onProg){
     this.halt();const seq=++this.seq;this.kind=this.kindOf(r);this.startAt=0;
@@ -964,7 +993,63 @@ function onPlayerMsg(conn,m){
     return;
   }
   const p=[...H.players.values()].find(x=>x.conn===conn);if(!p)return;
-  if(m.t==='answer')onAnswer(p,m);else if(m.t==='guess')onGuess(p,m);
+  if(m.t==='answer')onAnswer(p,m);else if(m.t==='guess')onGuess(p,m);else if(m.t==='buzz')onBuzz(p,m);
+}
+// ---------- 手機搶答鈴 ----------
+// p.ans[idx] = {t: 按下的時間, order: 回答順序, state: 'queued'|'answering'|'wrong'|'correct'}
+function onBuzz(p,m){
+  const q=H.q;
+  if(H.phase!=='question'||S.mode!=='buzz'||m.idx!==H.idx||!q||q.timeUp||p.ans[H.idx])return;
+  q.queue.push(p.pid);
+  p.ans[H.idx]={t:elapsed(),order:q.queue.length,state:'queued'};
+  if(!q.cur)nextAnswerer();else{broadcast();renderBuzz();renderSide()}
+}
+function nextAnswerer(){
+  const q=H.q;if(!q)return;
+  const pid=q.queue.find(id=>{const x=H.players.get(id);return x&&x.ans[H.idx]&&x.ans[H.idx].state==='queued'});
+  if(pid){
+    q.cur=pid;H.players.get(pid).ans[H.idx].state='answering';
+    // 有人搶到：音樂和倒數都先停，讓他回答
+    if(Engine.playing)Engine.pause();
+    if(!q.paused&&!q.timeUp){q.acc+=performance.now()-q.t0;q.paused=true}
+    ding();
+  }else{
+    q.cur=null;
+    const on=[...H.players.values()].filter(x=>x.online);
+    if(on.length&&on.every(x=>x.ans[H.idx])){
+      // 每個人都搶過而且都答錯了，直接揭曉
+      const idx=H.idx;setTimeout(()=>{if(H.phase==='question'&&H.idx===idx)reveal()},900);
+    }else if(!q.timeUp){
+      if(q.paused){q.t0=performance.now();q.paused=false}
+      if(!Engine.playing)Engine.play();
+    }
+  }
+  broadcast();renderBuzz();renderSide();renderControls();updateTimer();
+}
+function judge(ok){
+  const q=H.q;if(H.phase!=='question'||!q||!q.cur)return;
+  const p=H.players.get(q.cur);const a=p&&p.ans[H.idx];
+  if(!a){q.cur=null;nextAnswerer();return}
+  if(ok){a.state='correct';a.correct=true;a.points=points(a.t);q.cur=null;reveal()}
+  else{a.state='wrong';a.correct=false;q.cur=null;nextAnswerer()}
+}
+function renderBuzz(){
+  const box=$('#buzz-panel');const on=S.mode==='buzz'&&!H.live&&(H.phase==='question'||H.phase==='reveal');
+  box.hidden=!on;if(!on){box.innerHTML='';return}
+  const q=H.q;const rows=(q?q.queue:[]).map(id=>H.players.get(id)).filter(Boolean).map(p=>({p,a:p.ans[H.idx]})).filter(x=>x.a);
+  const TAG={answering:'回答中',queued:'等待中',wrong:'答錯',correct:'答對'};
+  const canJudge=H.phase==='question'&&q&&q.cur;
+  box.innerHTML=`<div class="bz-head"><span class="eyebrow">搶答順序</span>${canJudge?'<span class="bz-actions"><button type="button" class="btn bz-ok" id="bz-right">○ 答對</button><button type="button" class="btn bz-no" id="bz-wrong">✕ 答錯</button></span>':''}</div>`+
+    (rows.length?`<ol class="bz-list">${rows.map(({p,a})=>`<li class="${a.state}"><b>${a.order}</b><span class="nm">${esc(p.name)}</span><small>${(a.t/1000).toFixed(1)} 秒</small><span class="tag">${TAG[a.state]||''}${a.state==='correct'&&a.points?' +'+a.points:''}</span></li>`).join('')}</ol>`
+      :`<p class="hint">${H.phase==='question'?'還沒有人搶答。聽出來就按手機上的「搶答」！':'這題沒有人搶答。'}</p>`);
+}
+let actx=null;
+function ding(){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const now=actx.currentTime;
+    [[880,0],[1320,.12]].forEach(([f,d])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.0001,now+d);g.gain.exponentialRampToValueAtTime(0.35,now+d+.02);g.gain.exponentialRampToValueAtTime(0.0001,now+d+.45);o.connect(g);g.connect(actx.destination);o.start(now+d);o.stop(now+d+.5)});
+  }catch(e){}
 }
 function elapsed(){const q=H.q;if(!q)return 0;return q.acc+(q.paused?0:performance.now()-q.t0)}
 function remain(){return Math.max(0,H.T-elapsed())}
@@ -986,9 +1071,9 @@ function onGuess(p,m){
   if(isCorrect(text,H.rounds[H.idx].song.title)){a.correct=true;a.t=elapsed();a.points=points(a.t)}
   sendState(p);renderSide();maybeAllDone();
 }
-function isDone(p){const a=p.ans[H.idx];if(!a)return false;return S.mode==='choice'?true:!!(a.correct||a.tries>=3)}
+function isDone(p){const a=p.ans[H.idx];if(!a)return false;return S.mode==='choice'||S.mode==='buzz'?true:!!(a.correct||a.tries>=3)}
 function maybeAllDone(){
-  if(H.phase!=='question'||H.live||!S.autoReveal)return;
+  if(H.phase!=='question'||H.live||S.mode==='buzz'||!S.autoReveal)return;
   const on=[...H.players.values()].filter(p=>p.online);
   if(on.length&&on.every(isDone)){const idx=H.idx;setTimeout(()=>{if(H.phase==='question'&&H.idx===idx)reveal()},700)}
 }
@@ -1001,6 +1086,11 @@ function stateFor(p){
   if(phase==='question'){
     s.remain=Math.round(remain());s.T=H.T;s.paused=!!(H.q&&(H.q.paused||H.q.timeUp));
     if(S.mode==='choice'){s.options=r.options;if(a)s.choice=a.choice}
+    else if(S.mode==='buzz'){
+      const q=H.q;const cur=q&&q.cur?H.players.get(q.cur):null;
+      const ahead=a&&a.state==='queued'?q.queue.filter(id=>{const x=H.players.get(id);const b=x&&x.ans[H.idx];return b&&(b.state==='queued'||b.state==='answering')&&b.order<a.order}).length:0;
+      s.buzz={state:a?a.state:null,order:a?a.order:null,ahead,cur:cur&&cur!==p?cur.name:null};
+    }
     else if(a){s.tries=a.tries;s.last=a.correct?null:a.last;s.correct=!!a.correct;s.gain=a.points||0}
   }else if(phase==='reveal'){
     s.answer=r.song.title;s.correct=!!(a&&a.correct);s.gain=a&&a.correct?a.points:0;
@@ -1036,7 +1126,7 @@ async function createRoom(){
 }
 // 主持人也一起答題：當成一位沒有連線的玩家（pid = 'host'）
 function syncHostPlayer(){
-  const want=S.hostPlays&&S.mode!=='live';
+  const want=S.hostPlays&&(S.mode==='choice'||S.mode==='type');
   if(want&&!H.players.has('host'))H.players.set('host',{pid:'host',name:uniqueName('主持人','host'),score:0,ans:{},gain:0,online:true,conn:null,joinedAt:0,isHost:true});
   else if(!want)H.players.delete('host');
 }
@@ -1113,7 +1203,7 @@ async function nextRound(){
     replaceRound(idx);H.idx--;nextRound();return;
   }
   if(H.idx!==idx)return;
-  H.fails=0;H.phase='question';H.q={t0:performance.now(),acc:0,paused:false,timeUp:false};
+  H.fails=0;H.phase='question';H.q={t0:performance.now(),acc:0,paused:false,timeUp:false,queue:[],cur:null};
   Engine.play();broadcast();renderGame();
   H.tick=setInterval(onTick,200);
   setTimeout(()=>{const nx=H.rounds[idx+1];if(nx&&H.idx===idx)Engine.prefetch(nx)},2000);
@@ -1129,6 +1219,8 @@ function onTick(){
 function reveal(){
   if(H.phase!=='question')return;
   clearInterval(H.tick);H.phase='reveal';
+  // 搶答鈴：主持人直接揭曉時，正在回答的人算沒答對
+  if(H.q&&H.q.cur){const x=H.players.get(H.q.cur);const b=x&&x.ans[H.idx];if(b&&b.state==='answering')b.state='wrong';H.q.cur=null}
   H.players.forEach(p=>{const a=p.ans[H.idx];p.gain=a&&a.correct?a.points:0;p.score+=p.gain});
   if(!Engine.playing)Engine.play();
   broadcast();renderGame();
@@ -1156,11 +1248,11 @@ function renderGame(){
     const meta=r.song.src==='zs'?`${CAT_NAME[r.song.cat]} · ${r.version==='piano'?'鋼琴演奏版':'原唱'}`:'自訂音檔';
     $('#plaque').innerHTML=`<span class="eyebrow">${esc(meta)}</span><h2>${esc(r.song.title)}</h2>${r.song.src==='zs'?`<a href="${ZS_PAGE}${esc(r.song.page)}" target="_blank" rel="noopener">到官網看歌詞與簡譜 ↗</a>`:''}`;
   }
-  renderHostOpts();renderHostPlay();renderControls();renderSide();updateTimer();renderTop();
+  renderHostOpts();renderHostPlay();renderBuzz();renderControls();renderSide();updateTimer();renderTop();
 }
 function renderHostOpts(){
   const r=H.rounds[H.idx];const box=$('#host-opts');
-  const showOpts=(S.mode==='choice'||(H.live&&S.liveChoices))&&(H.phase==='question'||H.phase==='reveal');
+  const showOpts=(S.mode==='choice'||((H.live||S.mode==='buzz')&&S.liveChoices))&&(H.phase==='question'||H.phase==='reveal');
   box.hidden=!showOpts;if(!showOpts){box.innerHTML='';return}
   const rev=H.phase==='reveal';const counts=r.options.map(()=>0);
   if(S.mode==='choice'&&!H.live)H.players.forEach(p=>{const a=p.ans[H.idx];if(a&&a.choice!=null)counts[a.choice]++});
@@ -1170,13 +1262,13 @@ function renderHostOpts(){
   box.className='opts'+(rev?' revealed':'');
   box.innerHTML=r.options.map((o,i)=>{
     const cls=`opt ${OPT_CLASS[i]} ${rev?(o===r.song.title?'right':'wrong'):''}`;
-    const inner=`${SHAPES[i]}<span class="ot">${esc(o)}</span>${rev&&ha&&ha.choice===i?`<span class="hp">${esc(hp.name)}</span>`:''}${rev&&!H.live?`<span class="cnt">${counts[i]}</span>`:''}`;
+    const inner=`${SHAPES[i]}<span class="ot">${esc(o)}</span>${rev&&ha&&ha.choice===i?`<span class="hp">${esc(hp.name)}</span>`:''}${rev&&!H.live&&S.mode==='choice'?`<span class="cnt">${counts[i]}</span>`:''}`;
     return canPick?`<button type="button" class="${cls}" data-host-choice="${i}" aria-label="${esc(hp.name)}選「${esc(o)}」（按 ${i+1}）">${inner}</button>`:`<div class="${cls}">${inner}</div>`;
   }).join('');
 }
 function renderControls(){
   const ph=H.phase;const media=ph==='question'||ph==='reveal';
-  $('#keys').textContent='快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽'+(!H.live&&H.players.has('host')&&S.mode==='choice'?' · 1～4 主持人作答':'');
+  $('#keys').textContent='快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽'+(!H.live&&H.players.has('host')&&S.mode==='choice'?' · 1～4 主持人作答':'')+(!H.live&&S.mode==='buzz'?' · O 答對 · X 答錯':'');
   $('#c-pause').hidden=!media;$('#c-pause').textContent=Engine.playing?'暫停':'繼續播放';
   $('#c-replay').hidden=!media;
   $('#c-reveal').hidden=ph!=='question';
@@ -1188,13 +1280,16 @@ function updateTimer(){
   let status='';
   if(H.phase==='loading'||H.phase==='stuck')status=H.loadMsg;
   else if(H.phase==='question'&&q){
-    if(q.timeUp)status=H.live?'時間到！按「揭曉答案」':'時間到';
+    const cur=S.mode==='buzz'&&q.cur?H.players.get(q.cur):null;
+    if(cur)status=`${cur.name} 搶到了，請回答！`;
+    else if(q.timeUp)status=H.live?'時間到！按「揭曉答案」':'時間到';
     else if(!Engine.playing)status='已暫停';
     else if(H.live)status='聽出來的人，大聲說出歌名！';
+    else if(S.mode==='buzz')status='聽出來就按手機上的「搶答」！';
     else if(H.players.has('host')&&![...H.players.values()].some(p=>!p.isHost))status=S.mode==='choice'?'仔細聽，點下面的選項作答':'仔細聽，在下面輸入歌名';
     else status='仔細聽，用手機作答';
   }
-  $('#veil-status').textContent=status;
+  $('#veil-status').textContent=status;$('#veil-status').classList.toggle('callout',S.mode==='buzz'&&!!(q&&q.cur)&&H.phase==='question');
   st.classList.toggle('playing',Engine.playing&&H.phase==='question');
   if(!q||H.phase!=='question'){$('#timer-num').textContent=H.phase==='question'?'':'♪';$('#prog').style.strokeDasharray='0 100';paths.forEach(p=>p.classList.remove('fall'));return}
   const rem=remain(),frac=rem/H.T;
@@ -1213,7 +1308,7 @@ function renderSide(){
   if(H.phase==='question'||H.phase==='loading'||H.phase==='stuck'){
     const on=ps.filter(p=>p.online);const n=on.filter(isDone).length;
     $('#side-title').textContent='作答狀況';
-    body.innerHTML=`<div class="answered"><b>${H.phase==='question'?n:0}</b><span>／ ${on.length} 人已作答</span></div><ul class="mini">${ps.map(p=>{const a=H.phase==='question'?p.ans[H.idx]:null;let c='';if(a){c=S.mode==='choice'?'done':(a.correct?'done':(a.tries>=3?'out':'trying'))}return `<li class="${c} ${p.online?'':'off'}" style="--c:${colorFor(p.pid)}">${esc(p.name)}</li>`}).join('')}</ul>`;
+    body.innerHTML=`<div class="answered"><b>${H.phase==='question'?n:0}</b><span>／ ${on.length} 人${S.mode==='buzz'?'已搶答':'已作答'}</span></div><ul class="mini">${ps.map(p=>{const a=H.phase==='question'?p.ans[H.idx]:null;let c='';if(a){c=S.mode==='choice'?'done':S.mode==='buzz'?(a.state==='wrong'?'out':'done'):(a.correct?'done':(a.tries>=3?'out':'trying'))}return `<li class="${c} ${p.online?'':'off'}" style="--c:${colorFor(p.pid)}">${esc(p.name)}</li>`}).join('')}</ul>`;
   }else{
     $('#side-title').textContent='排行榜';
     body.innerHTML=ps.length?`<ol class="board">${ranked().map(p=>`<li><span class="rk">${rankOf(p)}</span><span class="nm">${esc(p.name)}</span><span class="sc">${p.gain?`<span class="gain">+${p.gain}</span>`:''}${p.score.toLocaleString()}</span></li>`).join('')}</ol>`:'<p class="hint">沒有玩家</p>';
@@ -1238,6 +1333,7 @@ function initHostControls(){
   $('#c-next').onclick=nextRound;
   $('#c-skip').onclick=()=>{H.fails=0;nextRound()};
   $('#c-end').onclick=e=>{const b=e.currentTarget;if(b.dataset.armed){delete b.dataset.armed;b.textContent='結束遊戲';finish();return}b.dataset.armed='1';b.textContent='再按一次結束';setTimeout(()=>{delete b.dataset.armed;b.textContent='結束遊戲'},3000)};
+  $('#buzz-panel').onclick=e=>{if(e.target.closest('#bz-right'))judge(true);else if(e.target.closest('#bz-wrong'))judge(false)};
   $('#host-opts').onclick=e=>{const b=e.target.closest('[data-host-choice]');if(b)hostAnswer(Number(b.dataset.hostChoice))};
   $('#host-play').addEventListener('submit',e=>{e.preventDefault();const inp=$('#host-guess');if(!inp)return;const v=inp.value.trim();if(!v)return;inp.value='';hostGuess(v);const again=$('#host-guess');if(again)again.focus()});
   $('#side-body').onclick=e=>{const b=e.target.closest('[data-team]');if(!b)return;const t=H.teams.find(x=>x.id===b.dataset.team);if(!t)return;t.score=Math.max(0,t.score+Number(b.dataset.d));renderSide()};
@@ -1245,6 +1341,7 @@ function initHostControls(){
   $('#to-setup').onclick=()=>{H.phase='lobby';broadcast();renderSetup();show('s-setup')};
   document.addEventListener('keydown',e=>{
     if(document.body.dataset.screen!=='s-game'||e.target.closest('input,textarea,select,button,a'))return;
+    if(S.mode==='buzz'&&!H.live&&/^[oOxX]$/.test(e.key)){if(H.phase==='question'&&H.q&&H.q.cur){e.preventDefault();judge(/[oO]/.test(e.key))}return}
     if(/^[1-4]$/.test(e.key)){
       const r=H.rounds[H.idx];const i=Number(e.key)-1;
       if(!H.live&&H.players.has('host')&&S.mode==='choice'&&H.phase==='question'&&r&&i<r.options.length){e.preventDefault();hostAnswer(i)}
@@ -1340,6 +1437,17 @@ function renderPad(){
       if(s.correct)h+=`<div class="result ok"><b>答對了！</b><span class="gain-big">+${s.gain}</span><span>揭曉後計入總分</span></div>`;
       else if((s.tries||0)>=3)h+=`<div class="result bad"><b>3 次機會用完了</b><span>等待揭曉答案…</span></div>`;
       else h+=`<form class="type-form" id="type-form"><label for="guess" class="label">這首讚頌叫什麼名字？</label><input id="guess" autocomplete="off" autocapitalize="off" maxlength="40" enterkeyhint="send" value="${esc(P.typed)}"><button class="btn btn-primary btn-xl" type="submit" ${P.pending?'disabled':''}>${P.pending?'比對中…':'送出答案'}</button>${s.last?`<p class="pad-note bad">「${esc(s.last)}」不對喔，還有 ${3-s.tries} 次機會</p>`:'<p class="pad-note">每題可以猜 3 次</p>'}</form>`;
+    }else if(s.mode==='buzz'){
+      const b=s.buzz||{};
+      if(!b.state){
+        h+=`<div class="buzz-wrap">${b.cur?`<p class="pad-note">${esc(b.cur)} 正在回答…答錯的話就輪到下一位</p>`:'<p class="pad-note">聽出來就按！最先按的人先回答</p>'}<button type="button" class="buzz-btn" id="buzz-btn" ${P.pending?'disabled':''}>搶答！</button></div>`;
+      }else if(b.state==='answering'){
+        h+=`<div class="result ok turn"><span>回答順序 ${b.order}</span><b>輪到你了！</b><span>請大聲說出歌名</span></div>`;
+      }else if(b.state==='queued'){
+        h+=`<div class="result"><span>你的回答順序</span><span class="order-big">${b.order}</span><span>${b.cur?esc(b.cur)+' 正在回答 · ':''}前面還有 ${b.ahead} 人</span></div>`;
+      }else if(b.state==='wrong'){
+        h+='<div class="result bad"><b>答錯了</b><span>這題不能再搶，等其他人回答</span></div>';
+      }else h+='<div class="result ok"><b>答對了！</b></div>';
     }else h+='<div class="pad-status"><h2>注意聽！</h2></div>';
   }else if(s.phase==='reveal'){
     if(s.mode==='choice'&&s.options){h+=`<div class="pad-opts locked revealed">${s.options.map((o,i)=>`<div class="opt ${OPT_CLASS[i]} ${o===s.answer?'right':'wrong'} ${s.choice===i?'picked':''}">${SHAPES[i]}<span class="ot">${esc(o)}</span></div>`).join('')}</div>`}
@@ -1366,7 +1474,15 @@ function initPlayerUI(){
     joinGame(code,name.slice(0,12));
   });
   const pb=$('#pad-body');
+  // 搶答用 pointerdown，手指一碰到就送出，比 click 快
+  const doBuzz=()=>{
+    if(!P.s||P.s.phase!=='question'||P.pending||(P.s.buzz&&P.s.buzz.state))return;
+    if(!send({t:'buzz',idx:P.s.idx}))return;
+    P.pending=true;renderPad();try{navigator.vibrate&&navigator.vibrate(60)}catch(x){}
+  };
+  pb.addEventListener('pointerdown',e=>{if(e.target.closest('#buzz-btn')){e.preventDefault();doBuzz()}});
   pb.addEventListener('click',e=>{
+    if(e.target.closest('#buzz-btn')){doBuzz();return}
     const b=e.target.closest('[data-choice]');if(!b||!P.s||P.s.phase!=='question')return;
     if(P.s.choice!=null||P.pending!=null)return;
     const i=Number(b.dataset.choice);if(!send({t:'answer',idx:P.s.idx,choice:i}))return;
