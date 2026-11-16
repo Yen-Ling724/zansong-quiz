@@ -45,7 +45,14 @@ h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
 p{margin:0}
 code,kbd{font-family:var(--f-num);background:var(--night);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.9em}
 .app{min-height:100vh;display:flex;flex-direction:column;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:env(safe-area-inset-top,0px) calc(16px + env(safe-area-inset-bottom,0px))}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px;max-width:1240px;width:100%;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 12px;padding-block:14px;max-width:1240px;width:100%;margin:0 auto}
+.topbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.back{appearance:none;border:1px solid var(--line);background:var(--night);color:var(--text);font:600 15px/1 var(--f-body);padding:8px 14px 8px 9px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;min-height:40px;white-space:nowrap;transition:border-color .15s,color .15s}
+.back:hover{border-color:var(--gold)}
+.back svg{width:18px;height:18px;flex:none}
+.back[data-armed]{border-color:var(--bad);color:var(--bad)}
+.back:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+@media (max-width:480px){body:has(#back-btn:not([hidden])) .brand span{display:none}}
 .brand{display:flex;align-items:center;gap:10px;font:700 22px/1 var(--f-display);letter-spacing:.08em;color:var(--gold-soft)}
 .brand svg{width:30px;height:30px;color:var(--gold)}
 .top-right{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -321,7 +328,10 @@ button.opt:active{transform:scale(.99)}
 <body>
 <div class="app">
   <header class="topbar">
-    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M32 9c7 8 7 23 0 33-7-10-7-25 0-33z"/><path d="M31 42C27 31 19 24 8 22c0 12 9 20 23 20z"/><path d="M33 42c4-11 12-18 23-20 0 12-9 20-23 20z"/><path d="M12 50h40"/></g></svg><span>讚頌猜歌</span></div>
+    <div class="topbar-left">
+      <button type="button" class="back" id="back-btn" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="back-label">上一頁</span></button>
+      <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><path d="M32 9c7 8 7 23 0 33-7-10-7-25 0-33z"/><path d="M31 42C27 31 19 24 8 22c0 12 9 20 23 20z"/><path d="M33 42c4-11 12-18 23-20 0 12-9 20-23 20z"/><path d="M12 50h40"/></g></svg><span>讚頌猜歌</span></div>
+    </div>
     <div class="top-right" id="top-right"></div>
   </header>
 
@@ -529,7 +539,7 @@ const store={
 const rid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
 let toastTimer;
 function toast(msg,ms=3800){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('on'),ms)}
-function show(id){$$('.screen').forEach(s=>{s.hidden=s.id!==id});document.body.dataset.screen=id;window.scrollTo(0,0);renderTop()}
+function show(id){$$('.screen').forEach(s=>{s.hidden=s.id!==id});document.body.dataset.screen=id;window.scrollTo(0,0);renderTop();renderBack();syncHistory()}
 function colorFor(s){let h=0;for(const c of String(s))h=(h*31+c.codePointAt(0))>>>0;return PCOLORS[h%PCOLORS.length]}
 function fmtTime(sec){sec=Math.max(0,Math.round(sec||0));return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
 function parseTime(v){
@@ -1257,7 +1267,7 @@ function joinErr(msg){$('#join-err').textContent=msg||''}
 function joinFail(msg){P.wantOpen=false;clearTimeout(P.retry);try{P.conn&&P.conn.close()}catch(e){}joinErr(msg);const b=$('#join-btn');b.disabled=false;b.textContent='加入'}
 function hostGone(){
   joinFail('主持人的房間已經關閉（可能重新整理了頁面）。請輸入主持人畫面上的新房號。');
-  P.s=null;$('#pad-body').innerHTML='';$('#pad-head').hidden=true;$('#join-form').hidden=false;$('#join-code').value='';$('#join-code').focus();
+  P.s=null;$('#pad-body').innerHTML='';$('#pad-head').hidden=true;$('#join-form').hidden=false;$('#join-code').value='';$('#join-code').focus();renderBack();
 }
 function joinGame(code,name){
   P.code=code;P.name=name;P.pid=store.get('pid','')||rid();store.set('pid',P.pid);store.set('name',name);
@@ -1307,7 +1317,7 @@ function onHostMsg(m){
   const prev=P.s;P.s=m;P.connected=true;P.attempts=0;P.lost=0;
   if(m.phase==='question'){P.deadline=Date.now()+(m.remain||0);if(!prev||prev.idx!==m.idx||prev.phase!=='question')P.typed=''}
   P.pending=null;
-  if(!prev){$('#join-form').hidden=true;$('#pad-head').hidden=false;const b=$('#join-btn');b.disabled=false;b.textContent='加入'}
+  if(!prev){$('#join-form').hidden=true;$('#pad-head').hidden=false;const b=$('#join-btn');b.disabled=false;b.textContent='加入';renderBack()}
   renderPad();
 }
 function renderPad(){
@@ -1372,6 +1382,50 @@ function initPlayerUI(){
   setInterval(tickPad,150);
 }
 
+// ---------- 上一頁（畫面左上的按鈕＋手機／瀏覽器的返回鍵） ----------
+const BACK_LABEL={'s-setup':'回首頁','s-lobby':'修改設定','s-final':'回到設定'};
+function renderBack(){
+  const scr=document.body.dataset.screen;const b=$('#back-btn');
+  const t=scr==='s-player'?(P.s?'離開房間':'回首頁'):BACK_LABEL[scr];
+  b.hidden=!t;if(t&&!b.dataset.armed)$('#back-label').textContent=t;
+}
+function leavePlayer(){
+  P.wantOpen=false;clearTimeout(P.retry);
+  try{P.conn&&P.conn.close()}catch(e){}try{P.peer&&P.peer.destroy()}catch(e){}
+  P.conn=null;P.peer=null;P.s=null;P.connected=false;
+  joinErr('');const jb=$('#join-btn');jb.disabled=false;jb.textContent='加入';
+  $('#pad-body').innerHTML='';$('#pad-head').hidden=true;$('#join-form').hidden=false;
+  if(location.search)try{history.replaceState(history.state,'',location.pathname)}catch(e){}
+  show('s-home');
+}
+function goBack(){
+  const scr=document.body.dataset.screen;const b=$('#back-btn');
+  if(scr==='s-setup'){show('s-home');return}
+  if(scr==='s-lobby'){renderSetup();show('s-setup');return}
+  if(scr==='s-final'){H.phase='lobby';broadcast();renderSetup();show('s-setup');return}
+  if(scr==='s-game'){toast('遊戲進行中。要離開請按下方的「結束遊戲」。');return}
+  if(scr==='s-player'){
+    if(!P.s){leavePlayer();return}
+    // 已經在房間裡：按兩次才離開，避免手滑
+    if(b.dataset.armed){delete b.dataset.armed;leavePlayer();return}
+    b.dataset.armed='1';$('#back-label').textContent='再按一次離開';toast('再按一次「上一頁」就會離開房間');
+    setTimeout(()=>{delete b.dataset.armed;renderBack()},3000);
+  }
+}
+// 不在首頁時，多放一筆瀏覽紀錄，讓手機的返回鍵回到上一個畫面，而不是直接離開遊戲
+let skipPop=false;
+function syncHistory(){
+  try{
+    const st=history.state&&history.state.zsg;
+    if(document.body.dataset.screen!=='s-home'){if(!st)history.pushState({zsg:1},'')}
+    else if(st){skipPop=true;history.back()}
+  }catch(e){}
+}
+window.addEventListener('popstate',()=>{
+  if(skipPop){skipPop=false;return}
+  goBack();syncHistory();
+});
+
 // ---------- 啟動 ----------
 function init(){
   petals($('#hero-svg'),12,40,52);petals($('#timer-svg'),12,66,30);
@@ -1379,6 +1433,7 @@ function init(){
   custom.filter(c=>!c.title).forEach(queueTitle);
   $('#go-host').onclick=()=>{renderSetup();show('s-setup')};
   $('#go-join').onclick=()=>enterPlayer('');
+  $('#back-btn').onclick=goBack;
   document.addEventListener('visibilitychange',()=>{
     if(document.visibilityState!=='visible')return;
     if(H.phase!=='idle'||P.wantOpen)wakeLock();
