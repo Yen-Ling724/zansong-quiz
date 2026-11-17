@@ -228,6 +228,24 @@ details[open] summary{margin-bottom:10px}
 .order-big{font:800 96px/1 var(--f-num);color:var(--gold-soft)}
 .result.turn{border-color:var(--gold);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(244,180,67,.18)}}
+/* 主持人手機 */
+.pchip .pname{border:0;background:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:underline dotted;text-underline-offset:4px}
+.pchip.remote{border-color:var(--gold)}
+.rbadge{font-size:12px;font-weight:700;color:var(--on-gold);background:var(--gold);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.pad-score.role{font:700 15px var(--f-body);color:var(--on-gold);background:var(--gold);border-radius:999px;padding:3px 12px}
+.peek{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:130px;padding:18px;border-radius:18px;border:2px dashed var(--gold);background:var(--panel);text-align:center;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;cursor:pointer}
+.peek .peek-ans,.peek .peek-meta{display:none}
+.peek .peek-hint{font:700 24px var(--f-display);color:var(--gold-soft)}
+.peek .peek-sub{font-size:13px;color:var(--muted)}
+.peek.open{border-style:solid;background:var(--panel-2)}
+.peek.open .peek-hint,.peek.open .peek-sub{display:none}
+.peek.open .peek-ans{display:block;font:700 clamp(32px,10vw,46px)/1.2 var(--f-display);color:var(--gold-soft)}
+.peek.open .peek-meta{display:block;font-size:13px;color:var(--muted)}
+.judge{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.judge .btn{min-height:76px;font-size:24px;border-radius:18px}
+.judge-who{text-align:center;font:700 22px var(--f-display);color:var(--gold-soft)}
+.rctl{display:flex;flex-wrap:wrap;gap:10px}
+.rctl .btn{flex:1 1 30%}
 .stage.playing .lt .petals{animation:breathe 2.6s ease-in-out infinite}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .opt{--c:var(--gold);display:flex;align-items:center;gap:14px;min-height:72px;padding:14px 18px;border-radius:16px;background:var(--c);color:var(--ink);font:700 clamp(19px,2.3vw,30px)/1.2 var(--f-display);border:0;text-align:left;transition:opacity .3s,box-shadow .3s,transform .12s;min-width:0}
@@ -436,7 +454,7 @@ button.opt:active{transform:scale(.99)}
             <div class="seg" id="start-seg" data-key="start"><button type="button" data-v="intro">從頭（前奏）</button><button type="button" data-v="random">隨機片段</button></div>
           </div>
           <label class="toggle" data-modes="choice type"><input type="checkbox" id="auto-reveal"><span>全部人答完就自動揭曉</span></label>
-          <div class="field" data-modes="choice type buzz">
+          <div class="field" data-modes="choice type">
             <label class="toggle"><input type="checkbox" id="host-plays"><span>主持人也一起答題</span></label>
             <p class="seg-desc" id="host-plays-desc"></p>
           </div>
@@ -464,6 +482,7 @@ button.opt:active{transform:scale(.99)}
           <h2>已加入 <b id="lobby-n">0</b> 人</h2>
           <ul class="players" id="lobby-players"></ul>
           <p class="hint" id="lobby-sum"></p>
+          <p class="warn" id="lobby-remote" hidden></p>
           <div class="row"><button type="button" class="btn btn-primary btn-xl" id="start-game">開始遊戲</button><button type="button" class="btn btn-ghost" id="back-setup">修改設定</button></div>
         </div>
       </div>
@@ -544,7 +563,7 @@ const PEER_PREFIX='zansong-guess-v1-';
 const MODE_DESC={
   choice:'大家用手機四選一，答對且越快，分數越高（500～1000 分）。',
   type:'大家用手機打出歌名，每題可以猜 3 次。數字、標點不用管，長歌名打錯一個字也算對。',
-  buzz:'大家先掃 QR code 加入。播歌時按手機上的「搶答」，最先按的是回答順序 1，音樂會自動暫停讓他說出歌名；主持人判斷對錯，答錯就換回答順序 2，依此類推。越早按、答對分數越高。一隊共用一支手機也可以。',
+  buzz:'主持人先用手機掃 QR code：第一個加入的是主持人手機，按住就能看答案、判斷對錯。接著大家再掃描加入。播歌時按手機上的「搶答」，最先按的是回答順序 1，音樂會自動暫停讓他說出歌名；答錯就換回答順序 2，依此類推。越早按、答對分數越高。一隊共用一支手機也可以。',
   live:'不用手機。主持人播歌、大家喊答案，主持人幫答對的隊伍加分。主持人想一起玩，把自己加進隊伍就好。'
 };
 const MODE_NAME={choice:'手機選擇題',type:'手機打字',buzz:'現場搶答（手機搶答）',live:'不用手機'};
@@ -761,7 +780,7 @@ function renderSetup(){
   if(document.activeElement!==$('#teams'))$('#teams').value=S.teams;
   $$('[data-modes]').forEach(e=>{e.hidden=!e.dataset.modes.split(' ').includes(S.mode)});
   $('#host-plays').checked=S.hostPlays;
-  const HP_HOW={choice:'主持人在這台電腦上點選項（或按 1～4）作答',type:'主持人在這台電腦上打歌名作答',buzz:'主持人在這台電腦上按「主持人搶答」（或鍵盤 B）一起搶，輪到自己時自己按答對或答錯'};
+  const HP_HOW={choice:'主持人在這台電腦上點選項（或按 1～4）作答',type:'主持人在這台電腦上打歌名作答'};
   $('#host-plays-desc').textContent=(HP_HOW[S.mode]||'')+'，和大家一起排名。沒有其他玩家也能開始，等於一個人練習。'+(S.mode==='type'?'打字模式時，大家看得到主持人打的字；想公平比賽，主持人可以改用手機加入。':'');
   renderZsList();renderCustom();renderPoolSum();
 }
@@ -955,7 +974,7 @@ const Engine={
 function ytErrText(c){return({2:'影片網址有誤',5:'播放器發生錯誤',100:'影片不存在或已下架',101:'這部影片不允許在其他網站播放',150:'這部影片不允許在其他網站播放',152:'請用網址開啟遊戲頁（不能直接雙擊檔案）',153:'請用網址開啟遊戲頁（不能直接雙擊檔案）'})[c]||('錯誤代碼 '+c)}
 
 // ---------- 主持人 ----------
-const H={peer:null,code:null,players:new Map(),kicked:new Set(),rounds:[],idx:-1,phase:'idle',q:null,tick:null,T:20000,teams:[],live:false,fails:0,loadMsg:''};
+const H={peer:null,code:null,remote:null,players:new Map(),kicked:new Set(),rounds:[],idx:-1,phase:'idle',q:null,tick:null,T:20000,teams:[],live:false,fails:0,loadMsg:''};
 
 function peerErrText(e){return({network:'連不上連線伺服器，請檢查網路','server-error':'連線伺服器忙碌，請稍後再試','socket-error':'連線伺服器中斷','socket-closed':'連線伺服器中斷','browser-incompatible':'這個瀏覽器不支援連線，請改用 Chrome、Edge 或 Safari'})[e.type]||e.message||String(e.type)}
 function openHostPeer(tries){
@@ -988,6 +1007,8 @@ function onPlayerMsg(conn,m){
     if(!p){
       if(H.players.size>=80){try{conn.send({t:'full'})}catch(e){}return}
       p={pid,name:uniqueName(name,pid),score:0,ans:{},gain:0,online:true,conn,joinedAt:Date.now()};H.players.set(pid,p);
+      // 現場搶答：第一個加入的手機就是主持人手機
+      if(S.mode==='buzz'&&!H.remote)H.remote=pid;
     }else{
       if(p.conn&&p.conn!==conn)try{p.conn.close()}catch(e){}
       p.conn=conn;p.online=true;if(name!==p.name)p.name=uniqueName(name,pid);
@@ -996,13 +1017,58 @@ function onPlayerMsg(conn,m){
     return;
   }
   const p=[...H.players.values()].find(x=>x.conn===conn);if(!p)return;
-  if(m.t==='answer')onAnswer(p,m);else if(m.t==='guess')onGuess(p,m);else if(m.t==='buzz')onBuzz(p,m);
+  if(m.t==='answer')onAnswer(p,m);else if(m.t==='guess')onGuess(p,m);else if(m.t==='buzz')onBuzz(p,m);else if(m.t==='cmd')onCmd(p,m);
+}
+// ---------- 主持人手機（現場搶答）----------
+// 主持人手機不參加搶答、不算分，只用來看答案和操作
+function isRemote(p){return S.mode==='buzz'&&!!p&&p.pid===H.remote}
+function gamers(){return[...H.players.values()].filter(p=>!isRemote(p))}
+function ensureRemote(){
+  if(S.mode!=='buzz'||(H.remote&&H.players.has(H.remote)))return;
+  const c=[...H.players.values()].filter(p=>!p.isHost).sort((a,b)=>a.joinedAt-b.joinedAt)[0];
+  H.remote=c?c.pid:null;
+}
+function replayClip(){
+  Engine.restart();
+  if(H.phase==='question'&&H.q&&H.q.paused){H.q.t0=performance.now();H.q.paused=false}
+  broadcast();renderControls();updateTimer();
+}
+function onCmd(p,m){
+  if(!isRemote(p))return;
+  const c=String(m.c||'');
+  if(c==='right'||c==='wrong'){
+    // 帶著回答順序，避免連按兩下把下一位也判錯
+    const q=H.q;if(H.phase!=='question'||!q||!q.cur)return;
+    const a=H.players.get(q.cur)&&H.players.get(q.cur).ans[H.idx];
+    if(m.order!=null&&a&&a.order!==m.order)return;
+    judge(c==='right');
+  }
+  else if(c==='reveal'){if(H.phase==='question')reveal()}
+  else if(c==='next'){if(H.phase==='reveal')nextRound()}
+  else if(c==='pause'){if(H.phase==='question'||H.phase==='reveal')togglePause()}
+  else if(c==='replay'){if(H.phase==='question'||H.phase==='reveal')replayClip()}
+  else if(c==='start'){if(H.phase==='lobby'&&document.body.dataset.screen==='s-lobby'&&gamers().some(x=>x.online))startGame()}
+}
+function remoteState(p){
+  const r=H.rounds[H.idx];const phase=H.phase==='stuck'?'loading':H.phase==='idle'?'lobby':H.phase;
+  const s={t:'state',role:'host',phase,mode:S.mode,idx:H.idx,total:H.rounds.length,name:p.name,n:gamers().filter(x=>x.online).length,playing:Engine.playing,last:H.idx+1>=H.rounds.length};
+  if(r&&(phase==='question'||phase==='reveal')){
+    s.answer=r.song.title;
+    s.meta=r.song.src==='zs'?`${CAT_NAME[r.song.cat]} · ${r.version==='piano'?'鋼琴演奏版':'原唱'}`:'';
+    const q=H.q;
+    s.queue=(q?q.queue:[]).map(id=>H.players.get(id)).filter(x=>x&&x.ans[H.idx]).map(x=>({order:x.ans[H.idx].order,name:x.name,state:x.ans[H.idx].state,pts:x.ans[H.idx].points||0}));
+    const cur=q&&q.cur?H.players.get(q.cur):null;
+    s.cur=cur?cur.name:null;s.curOrder=cur&&cur.ans[H.idx]?cur.ans[H.idx].order:null;
+  }
+  if(phase==='question'){s.remain=Math.round(remain());s.T=H.T;s.paused=!!(H.q&&(H.q.paused||H.q.timeUp))}
+  if(phase==='final')s.top=ranked().slice(0,5).map(x=>({name:x.name,score:x.score}));
+  return s;
 }
 // ---------- 手機搶答鈴 ----------
 // p.ans[idx] = {t: 按下的時間, order: 回答順序, state: 'queued'|'answering'|'wrong'|'correct'}
 function onBuzz(p,m){
   const q=H.q;
-  if(H.phase!=='question'||S.mode!=='buzz'||m.idx!==H.idx||!q||q.timeUp||p.ans[H.idx])return;
+  if(isRemote(p)||H.phase!=='question'||S.mode!=='buzz'||m.idx!==H.idx||!q||q.timeUp||p.ans[H.idx])return;
   q.queue.push(p.pid);
   p.ans[H.idx]={t:elapsed(),order:q.queue.length,state:'queued'};
   if(!q.cur)nextAnswerer();else{broadcast();renderBuzz();renderHostPlay();renderSide()}
@@ -1018,7 +1084,7 @@ function nextAnswerer(){
     ding();
   }else{
     q.cur=null;
-    const on=[...H.players.values()].filter(x=>x.online);
+    const on=gamers().filter(x=>x.online);
     if(on.length&&on.every(x=>x.ans[H.idx])){
       // 每個人都搶過而且都答錯了，直接揭曉
       const idx=H.idx;setTimeout(()=>{if(H.phase==='question'&&H.idx===idx)reveal()},900);
@@ -1080,12 +1146,13 @@ function maybeAllDone(){
   const on=[...H.players.values()].filter(p=>p.online);
   if(on.length&&on.every(isDone)){const idx=H.idx;setTimeout(()=>{if(H.phase==='question'&&H.idx===idx)reveal()},700)}
 }
-function ranked(){return[...H.players.values()].sort((a,b)=>b.score-a.score||a.joinedAt-b.joinedAt)}
-function rankOf(p){return 1+[...H.players.values()].filter(x=>x.score>p.score).length}
+function ranked(){return gamers().sort((a,b)=>b.score-a.score||a.joinedAt-b.joinedAt)}
+function rankOf(p){return 1+gamers().filter(x=>x.score>p.score).length}
 function stateFor(p){
+  if(isRemote(p))return remoteState(p);
   const r=H.rounds[H.idx];const a=r?p.ans[H.idx]:null;
   const phase=H.phase==='stuck'?'loading':H.phase==='idle'?'lobby':H.phase;
-  const s={t:'state',phase,mode:S.mode,idx:H.idx,total:H.rounds.length,name:p.name,score:p.score,rank:rankOf(p),n:H.players.size};
+  const s={t:'state',phase,mode:S.mode,idx:H.idx,total:H.rounds.length,name:p.name,score:p.score,rank:rankOf(p),n:gamers().length};
   if(phase==='question'){
     s.remain=Math.round(remain());s.T=H.T;s.paused=!!(H.q&&(H.q.paused||H.q.timeUp));
     if(S.mode==='choice'){s.options=r.options;if(a)s.choice=a.choice}
@@ -1129,17 +1196,13 @@ async function createRoom(){
 }
 // 主持人也一起答題：當成一位沒有連線的玩家（pid = 'host'）
 function syncHostPlayer(){
-  const want=S.hostPlays&&S.mode!=='live';
+  const want=S.hostPlays&&(S.mode==='choice'||S.mode==='type');
   if(want&&!H.players.has('host'))H.players.set('host',{pid:'host',name:uniqueName('主持人','host'),score:0,ans:{},gain:0,online:true,conn:null,joinedAt:0,isHost:true});
   else if(!want)H.players.delete('host');
 }
 function hostAnswer(i){
   const p=H.players.get('host');if(!p||S.mode!=='choice')return;
   onAnswer(p,{idx:H.idx,choice:i});renderHostOpts();renderHostPlay();
-}
-function hostBuzz(){
-  const p=H.players.get('host');if(!p||S.mode!=='buzz'||H.phase!=='question')return;
-  onBuzz(p,{idx:H.idx});renderHostPlay();
 }
 function hostGuess(text){
   const p=H.players.get('host');if(!p||S.mode!=='type')return;
@@ -1150,16 +1213,7 @@ function renderHostPlay(){
   const on=!!hp&&!H.live&&(H.phase==='question'||H.phase==='reveal');
   box.hidden=!on;if(!on){box.innerHTML='';return}
   const a=hp.ans[H.idx];const who=`<span class="who">${esc(hp.name)}</span>`;
-  if(H.phase==='reveal'){box.innerHTML=who+(a&&a.correct?`<span class="ok">答對了！+${a.points}</span>`:`<span class="bad">${a?'沒答對':(S.mode==='buzz'?'沒有搶答':'沒有作答')}</span>`);return}
-  if(S.mode==='buzz'){
-    const st=a&&a.state;
-    if(!st)box.innerHTML=who+`<button type="button" class="btn btn-primary" id="host-buzz" ${H.q&&H.q.timeUp?'disabled':''}>主持人搶答</button><span class="hp-note">或按鍵盤 B</span>`;
-    else if(st==='answering')box.innerHTML=who+'<span class="ok">輪到主持人回答！說完自己按「答對」或「答錯」</span>';
-    else if(st==='queued')box.innerHTML=who+`<span>回答順序 ${a.order}，等前面的人回答…</span>`;
-    else if(st==='wrong')box.innerHTML=who+'<span class="bad">答錯了，這題不能再搶</span>';
-    else box.innerHTML=who+'<span class="ok">答對了！</span>';
-    return;
-  }
+  if(H.phase==='reveal'){box.innerHTML=who+(a&&a.correct?`<span class="ok">答對了！+${a.points}</span>`:`<span class="bad">${a?'沒答對':'沒有作答'}</span>`);return}
   if(S.mode==='choice'){box.innerHTML=who+`<span>${a?'已作答，等待揭曉…':(H.q&&H.q.timeUp?'時間到':'點上面的選項，或按鍵盤 1～4 作答')}</span>`;return}
   if(a&&a.correct){box.innerHTML=who+'<span class="ok">答對了！揭曉後計分</span>';return}
   if(a&&a.tries>=3){box.innerHTML=who+'<span class="bad">3 次機會用完了</span>';return}
@@ -1173,13 +1227,22 @@ function showLobby(){
   try{const qr=qrcode(0,'M');qr.addData(url);qr.make();$('#qr').innerHTML=qr.createSvgTag({cellSize:6,margin:2,scalable:true});$('#qr').hidden=false}catch(e){$('#qr').hidden=true}
   $('#file-warn').hidden=location.protocol!=='file:';
   $('#lobby-sum').textContent=`${MODE_NAME[S.mode]} ·${Math.min(S.rounds,buildPool().length)} 題 · 每題 ${S.time} 秒${S.hostPlays?' · 主持人一起答題（沒有其他人也能開始）':''}`;
-  syncHostPlayer();H.phase='lobby';show('s-lobby');renderLobby();broadcast();
+  syncHostPlayer();ensureRemote();H.phase='lobby';show('s-lobby');renderLobby();broadcast();
 }
 function renderLobby(){
-  const ps=[...H.players.values()];
-  $('#lobby-n').textContent=ps.filter(p=>p.online).length;
-  $('#lobby-players').innerHTML=(ps.length?ps.map(p=>p.isHost?`<li class="pchip host" style="--c:var(--gold)"><span class="dot"></span>${esc(p.name)}</li>`:`<li class="pchip ${p.online?'':'off'}" style="--c:${colorFor(p.pid)}"><span class="dot"></span>${esc(p.name)}<button type="button" data-kick="${esc(p.pid)}" aria-label="移除 ${esc(p.name)}" title="移除">✕</button></li>`).join(''):'')+(ps.some(p=>!p.isHost)?'':'<li class="empty">還沒有人加入。請大家用手機掃描左邊的 QR code。</li>');
-  $('#start-game').disabled=!ps.some(p=>p.online);
+  const all=[...H.players.values()];const buzz=S.mode==='buzz';
+  // 主持人手機排第一個
+  const ps=all.slice().sort((a,b)=>(isRemote(b)?1:0)-(isRemote(a)?1:0));
+  $('#lobby-n').textContent=gamers().filter(p=>p.online).length;
+  const chip=p=>{
+    if(p.isHost)return `<li class="pchip host" style="--c:var(--gold)"><span class="dot"></span>${esc(p.name)}</li>`;
+    const nm=buzz&&!isRemote(p)?`<button type="button" class="pname" data-remote="${esc(p.pid)}" title="改成主持人手機">${esc(p.name)}</button>`:`<span>${esc(p.name)}</span>`;
+    return `<li class="pchip ${p.online?'':'off'} ${isRemote(p)?'remote':''}" style="--c:${colorFor(p.pid)}"><span class="dot"></span>${nm}${isRemote(p)?'<span class="rbadge">主持人手機</span>':''}<button type="button" data-kick="${esc(p.pid)}" aria-label="移除 ${esc(p.name)}" title="移除">✕</button></li>`;
+  };
+  $('#lobby-players').innerHTML=ps.map(chip).join('')+(ps.some(p=>!p.isHost)?'':`<li class="empty">${buzz?'主持人請先用手機掃描左邊的 QR code，第一個加入的會成為主持人手機；接著大家再掃描加入。':'還沒有人加入。請大家用手機掃描左邊的 QR code。'}</li>`);
+  const hint=$('#lobby-remote');hint.hidden=!buzz;
+  hint.textContent=H.remote&&H.players.has(H.remote)?`主持人手機：${H.players.get(H.remote).name}。主持人手機看得到答案、可以判斷對錯，不參加搶答。點玩家的名字可以改成由他當主持人手機。`:'第一個加入的手機會成為主持人手機（看得到答案、可以判斷對錯，不參加搶答）。';
+  $('#start-game').disabled=!gamers().some(p=>p.online);
 }
 function renderPlayersUI(){const scr=document.body.dataset.screen;if(scr==='s-lobby')renderLobby();else if(scr==='s-game')renderSide();renderTop()}
 function renderTop(){
@@ -1187,7 +1250,7 @@ function renderTop(){
   if(!['s-lobby','s-game','s-final'].includes(scr)){el.innerHTML='';return}
   if(H.live){el.innerHTML='<span class="pill">不用手機</span>';return}
   if(!H.code){el.innerHTML='<span class="pill">一個人練習</span>';return}
-  const on=[...H.players.values()].filter(p=>p.online).length;
+  const on=gamers().filter(p=>p.online).length;
   el.innerHTML=`<span class="pill">房號 <b>${esc(H.code)}</b></span><span class="pill"><b>${on}</b>人在線</span>`;
 }
 
@@ -1249,7 +1312,7 @@ function togglePause(){
   const q=H.q;
   if(Engine.playing){Engine.pause();if(H.phase==='question'&&q&&!q.paused&&!q.timeUp){q.acc+=performance.now()-q.t0;q.paused=true}}
   else{Engine.play();if(H.phase==='question'&&q&&q.paused){q.t0=performance.now();q.paused=false}}
-  if(H.phase==='question')broadcast();
+  broadcast();
   renderControls();updateTimer();
 }
 
@@ -1284,7 +1347,7 @@ function renderHostOpts(){
 }
 function renderControls(){
   const ph=H.phase;const media=ph==='question'||ph==='reveal';
-  $('#keys').textContent='快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽'+(!H.live&&H.players.has('host')&&S.mode==='choice'?' · 1～4 主持人作答':'')+(!H.live&&S.mode==='buzz'?' · O 答對 · X 答錯'+(H.players.has('host')?' · B 主持人搶答':''):'');
+  $('#keys').textContent='快捷鍵：空白鍵 暫停／繼續 · Enter 揭曉／下一題 · R 重聽'+(!H.live&&H.players.has('host')&&S.mode==='choice'?' · 1～4 主持人作答':'')+(!H.live&&S.mode==='buzz'?' · O 答對 · X 答錯':'');
   $('#c-pause').hidden=!media;$('#c-pause').textContent=Engine.playing?'暫停':'繼續播放';
   $('#c-replay').hidden=!media;
   $('#c-reveal').hidden=ph!=='question';
@@ -1301,7 +1364,7 @@ function updateTimer(){
     else if(q.timeUp)status=H.live?'時間到！按「揭曉答案」':'時間到';
     else if(!Engine.playing)status='已暫停';
     else if(H.live)status='聽出來的人，大聲說出歌名！';
-    else if(S.mode==='buzz')status=H.players.has('host')&&![...H.players.values()].some(p=>!p.isHost)?'聽出來就按下面的「主持人搶答」！':'聽出來就按手機上的「搶答」！';
+    else if(S.mode==='buzz')status='聽出來就按手機上的「搶答」！';
     else if(H.players.has('host')&&![...H.players.values()].some(p=>!p.isHost))status=S.mode==='choice'?'仔細聽，點下面的選項作答':'仔細聽，在下面輸入歌名';
     else status='仔細聽，用手機作答';
   }
@@ -1320,7 +1383,7 @@ function renderSide(){
     body.innerHTML=`<ol class="board teams">${H.teams.map(t=>`<li><span class="nm">${esc(t.name)}</span><span class="tbtns"><button type="button" class="btn btn-sm btn-ghost" data-team="${t.id}" data-d="-1" aria-label="${esc(t.name)} 減 1 分">−</button><b class="sc">${t.score}</b><button type="button" class="btn btn-sm btn-primary" data-team="${t.id}" data-d="1" aria-label="${esc(t.name)} 加 1 分">＋</button></span></li>`).join('')}</ol><p class="hint">答對的隊伍按「＋」加 1 分。</p>`;
     return;
   }
-  const ps=[...H.players.values()];
+  const ps=gamers();
   if(H.phase==='question'||H.phase==='loading'||H.phase==='stuck'){
     const on=ps.filter(p=>p.online);const n=on.filter(isDone).length;
     $('#side-title').textContent='作答狀況';
@@ -1339,26 +1402,27 @@ function renderFinal(){
   $('#ranking').hidden=list.length<=3;
 }
 function initHostControls(){
-  $('#lobby-players').onclick=e=>{const b=e.target.closest('[data-kick]');if(!b)return;const p=H.players.get(b.dataset.kick);if(!p)return;H.kicked.add(p.pid);if(p.conn){try{p.conn.send({t:'kicked'})}catch(x){}const c=p.conn;setTimeout(()=>{try{c.close()}catch(x){}},400)}H.players.delete(p.pid);renderLobby();renderTop();broadcast()};
+  $('#lobby-players').onclick=e=>{
+    const rm=e.target.closest('[data-remote]');
+    if(rm){if(H.players.has(rm.dataset.remote)){H.remote=rm.dataset.remote;renderLobby();renderTop();broadcast();toast(`改由「${H.players.get(H.remote).name}」當主持人手機`)}return}
+    const b=e.target.closest('[data-kick]');if(!b)return;const p=H.players.get(b.dataset.kick);if(!p)return;H.kicked.add(p.pid);if(p.pid===H.remote)H.remote=null;if(p.conn){try{p.conn.send({t:'kicked'})}catch(x){}const c=p.conn;setTimeout(()=>{try{c.close()}catch(x){}},400)}H.players.delete(p.pid);renderLobby();renderTop();broadcast()};
   $('#copy-url').onclick=async()=>{const t=$('#join-url').textContent;try{await navigator.clipboard.writeText(t);toast('已複製邀請連結')}catch(e){const r=document.createRange();r.selectNodeContents($('#join-url'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('已選取網址，請按 Ctrl+C 複製')}};
   $('#start-game').onclick=startGame;
   $('#back-setup').onclick=()=>{renderSetup();show('s-setup')};
   $('#c-pause').onclick=togglePause;
-  $('#c-replay').onclick=()=>{Engine.restart();if(H.phase==='question'&&H.q&&H.q.paused){H.q.t0=performance.now();H.q.paused=false;broadcast()}renderControls();updateTimer()};
+  $('#c-replay').onclick=replayClip;
   $('#c-reveal').onclick=reveal;
   $('#c-next').onclick=nextRound;
   $('#c-skip').onclick=()=>{H.fails=0;nextRound()};
   $('#c-end').onclick=e=>{const b=e.currentTarget;if(b.dataset.armed){delete b.dataset.armed;b.textContent='結束遊戲';finish();return}b.dataset.armed='1';b.textContent='再按一次結束';setTimeout(()=>{delete b.dataset.armed;b.textContent='結束遊戲'},3000)};
   $('#buzz-panel').onclick=e=>{if(e.target.closest('#bz-right'))judge(true);else if(e.target.closest('#bz-wrong'))judge(false)};
   $('#host-opts').onclick=e=>{const b=e.target.closest('[data-host-choice]');if(b)hostAnswer(Number(b.dataset.hostChoice))};
-  $('#host-play').addEventListener('click',e=>{if(e.target.closest('#host-buzz'))hostBuzz()});
   $('#host-play').addEventListener('submit',e=>{e.preventDefault();const inp=$('#host-guess');if(!inp)return;const v=inp.value.trim();if(!v)return;inp.value='';hostGuess(v);const again=$('#host-guess');if(again)again.focus()});
   $('#side-body').onclick=e=>{const b=e.target.closest('[data-team]');if(!b)return;const t=H.teams.find(x=>x.id===b.dataset.team);if(!t)return;t.score=Math.max(0,t.score+Number(b.dataset.d));renderSide()};
   $('#again').onclick=()=>{if(!H.live&&!H.players.size){showLobby();return}startGame()};
   $('#to-setup').onclick=()=>{H.phase='lobby';broadcast();renderSetup();show('s-setup')};
   document.addEventListener('keydown',e=>{
     if(document.body.dataset.screen!=='s-game'||e.target.closest('input,textarea,select,button,a'))return;
-    if(S.mode==='buzz'&&/^[bB]$/.test(e.key)){if(H.players.has('host')&&H.phase==='question'){e.preventDefault();hostBuzz()}return}
     if(S.mode==='buzz'&&!H.live&&/^[oOxX]$/.test(e.key)){if(H.phase==='question'&&H.q&&H.q.cur){e.preventDefault();judge(/[oO]/.test(e.key))}return}
     if(/^[1-4]$/.test(e.key)){
       const r=H.rounds[H.idx];const i=Number(e.key)-1;
@@ -1435,8 +1499,34 @@ function onHostMsg(m){
   if(!prev){$('#join-form').hidden=true;$('#pad-head').hidden=false;const b=$('#join-btn');b.disabled=false;b.textContent='加入';renderBack()}
   renderPad();
 }
+// 主持人手機的畫面：按住看答案、搶答順序、判斷對錯和操作按鈕
+function renderRemote(s){
+  const body=$('#pad-body');
+  $('#pad-name').textContent=s.name;const sc=$('#pad-score');sc.textContent='主持人';sc.classList.add('role');
+  let h=P.connected?'':'<p class="conn-warn">連線中斷，正在重新連線…</p>';
+  if(s.phase==='lobby'){
+    h+=`<div class="pad-status"><span class="eyebrow">你是主持人手機</span><h2>等大家加入</h2><p>遊戲開始後，這裡會顯示答案（按住才看得到）和判斷對錯的按鈕。</p><p class="hint">目前有 ${s.n} 位玩家</p>${s.n?'<button type="button" class="btn btn-primary btn-xl" data-cmd="start">開始遊戲</button>':''}</div>`;
+  }else if(s.phase==='loading'){
+    h+=`<div class="pad-status"><span class="eyebrow">第 ${s.idx+1} / ${s.total} 題</span><h2>下一首準備中…</h2></div>`;
+  }else if(s.phase==='question'||s.phase==='reveal'){
+    const q=s.phase==='question';
+    h+=`<div class="q-meta"><span class="eyebrow">第 ${s.idx+1} / ${s.total} 題${q?'':' · 已揭曉'}</span>${q?'<span class="secs" id="p-secs"></span>':''}</div>${q?'<div class="tbar"><i id="p-bar"></i></div>':''}`;
+    const open=!q||P.peeking;
+    h+=`<div class="peek ${open?'open':''}" id="peek" ${q?'role="button" tabindex="0" aria-label="按住看答案"':'data-always="1"'}><span class="peek-hint">按住看答案</span><span class="peek-sub">放開就會蓋起來，旁邊的人看不到</span><span class="peek-ans">${esc(s.answer||'')}</span><span class="peek-meta">${esc(s.meta||'')}</span></div>`;
+    if(q&&s.cur)h+=`<p class="judge-who">${esc(s.cur)} 回答中</p><div class="judge"><button type="button" class="btn bz-ok" data-cmd="right">○ 答對</button><button type="button" class="btn bz-no" data-cmd="wrong">✕ 答錯</button></div>`;
+    const TAG={answering:'回答中',queued:'等待中',wrong:'答錯',correct:'答對'};
+    const rows=s.queue||[];
+    h+=rows.length?`<ol class="bz-list">${rows.map(x=>`<li class="${x.state}"><b>${x.order}</b><span class="nm">${esc(x.name)}</span><small></small><span class="tag">${TAG[x.state]||''}${x.state==='correct'&&x.pts?' +'+x.pts:''}</span></li>`).join('')}</ol>`:`<p class="pad-note">${q?'還沒有人搶答':'這題沒有人搶答'}</p>`;
+    h+=`<div class="rctl">${q?'<button type="button" class="btn btn-primary" data-cmd="reveal">揭曉答案</button>':`<button type="button" class="btn btn-primary" data-cmd="next">${s.last?'看最終排名':'下一題'}</button>`}<button type="button" class="btn" data-cmd="pause">${s.playing?'暫停':'繼續播放'}</button><button type="button" class="btn" data-cmd="replay">重聽</button></div>`;
+  }else if(s.phase==='final'){
+    h+=`<div class="pad-status final-me"><span class="eyebrow">遊戲結束</span><h2>最終排名</h2><ol class="board">${(s.top||[]).map((x,i)=>`<li><span class="rk">${i+1}</span><span class="nm">${esc(x.name)}</span><span class="sc">${x.score.toLocaleString()}</span></li>`).join('')}</ol><p class="hint">要再玩一輪，請在電腦上按「再玩一輪」。</p></div>`;
+  }
+  body.innerHTML=h;tickPad();
+}
 function renderPad(){
   const s=P.s;if(!s)return;const body=$('#pad-body');
+  if(s.role==='host'){renderRemote(s);return}
+  $('#pad-score').classList.remove('role');
   $('#pad-name').textContent=s.name;$('#pad-score').textContent=s.score.toLocaleString()+' 分';
   const hadFocus=document.activeElement&&document.activeElement.id==='guess';
   let h=P.connected?'':'<p class="conn-warn">連線中斷，正在重新連線…</p>';
@@ -1513,6 +1603,22 @@ function initPlayerUI(){
     P.typed='';P.pending=v;renderPad();
   });
   pb.addEventListener('input',e=>{if(e.target.id==='guess')P.typed=e.target.value});
+  // 主持人手機：操作按鈕
+  pb.addEventListener('click',e=>{
+    const c=e.target.closest('[data-cmd]');if(!c||!P.s||P.s.role!=='host')return;
+    const cmd=c.dataset.cmd;
+    if((cmd==='right'||cmd==='wrong')&&Date.now()-(P.cmdAt||0)<800)return;
+    P.cmdAt=Date.now();
+    send({t:'cmd',c:cmd,order:P.s.curOrder});
+    try{navigator.vibrate&&navigator.vibrate(30)}catch(x){}
+  });
+  // 主持人手機：按住看答案，放開就蓋起來
+  const peekOn=()=>{const pk=$('#peek');if(!pk||pk.dataset.always)return;P.peeking=true;pk.classList.add('open')};
+  const peekOff=()=>{if(!P.peeking)return;P.peeking=false;const pk=$('#peek');if(pk&&!pk.dataset.always)pk.classList.remove('open')};
+  pb.addEventListener('pointerdown',e=>{if(e.target.closest('#peek')){e.preventDefault();peekOn()}});
+  document.addEventListener('pointerup',peekOff);document.addEventListener('pointercancel',peekOff);
+  pb.addEventListener('contextmenu',e=>{if(e.target.closest('#peek'))e.preventDefault()});
+  pb.addEventListener('keydown',e=>{if(e.target.id==='peek'&&(e.key===' '||e.key==='Enter')){e.preventDefault();P.peeking?peekOff():peekOn()}});
   setInterval(tickPad,150);
 }
 
