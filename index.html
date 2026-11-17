@@ -398,7 +398,12 @@ button.opt:active{transform:scale(.99)}
           <h2>歌曲來源</h2>
           <label class="toggle"><input type="checkbox" id="use-zs"><span>福智讚頌官網歌單</span><small id="zs-count"></small></label>
           <div class="sub" id="zs-opts">
-            <div class="field"><span class="label">字部（依歌名字數分類）</span><div class="chips" id="cat-chips"></div></div>
+            <div class="field">
+              <span class="label">選歌方式</span>
+              <div class="seg" id="by-seg" data-key="zsBy"><button type="button" data-v="cat">依字部</button><button type="button" data-v="year">依年份</button></div>
+            </div>
+            <div class="field" id="cat-field"><span class="label">字部（依歌名字數分類）</span><div class="chips" id="cat-chips"></div></div>
+            <div class="field" id="year-field"><span class="label">年份（歌曲在官網上架的年份）</span><div class="chips" id="year-chips"></div><p class="seg-desc">官網 2014 年成立，之前的歌都在那年一起上架，所以合併成「2014 以前」。</p></div>
             <div class="field">
               <span class="label">播放版本</span>
               <div class="seg" id="ver-seg" data-key="ver"><button type="button" data-v="orig">原唱</button><button type="button" data-v="piano">鋼琴演奏</button><button type="button" data-v="mix">混合</button></div>
@@ -550,6 +555,11 @@ const ZS=[["藍空",2,"【福智讚頌】2026-藍空.mp3","","2/5912-70158"],["�
 const ZS_BASE='https://d3v2d3f6zmz0pr.cloudfront.net/zangsong/';
 const ZS_PAGE='https://www.blisswisdom.org/teachings/praise/';
 const CAT_NAME={2:'二字部',3:'三字部',4:'四字部',5:'五字部',6:'六字部',7:'七字部以上'};
+// 官網上架年份（2014 年官網成立時一起上架的歌，沒列在這裡，都算「2014 以前」）
+const ZS_YEAR={'勇悍行(快版)':2016,'勇悍行(慢版)':2016,'樹影婆娑明月照':2016,'誓言':2017,'橡木子':2017,'佛子行':2017,'永不分離':2017,'我們在一起':2017,'踏浪而歌':2018,'神弓傳奇':2018,'正念威武':2019,'如來世間燈':2020,'藍空':2021,'虔誠':2021,'燈明了':2021,'沙漠玫瑰':2021,'水、花、人':2022,'傑仁波切 (二)':2022,'文殊菩薩讚佛偈':2023};
+const yearKey=title=>ZS_YEAR[title]?String(ZS_YEAR[title]):'old';
+const YEAR_KEYS=['old',...[...new Set(Object.values(ZS_YEAR))].sort().map(String)];
+const yearLabel=k=>k==='old'?'2014 以前':k;
 const PEER_PREFIX='zansong-guess-v1-';
 const MODE_DESC={
   choice:'大家用手機四選一，答對且越快，分數越高（500～1000 分）。',
@@ -648,7 +658,7 @@ function cleanTitle(t){
 }
 
 // ---------- 設定與題庫 ----------
-const DEFAULTS={useZs:true,cats:[2,3,4,5,6,7],off:[],ver:'orig',useCustom:false,mode:'choice',rounds:10,time:20,start:'intro',autoReveal:true,teams:'第一組\n第二組\n第三組\n第四組',liveChoices:false,hostPlays:false};
+const DEFAULTS={useZs:true,zsBy:'cat',cats:[2,3,4,5,6,7],years:YEAR_KEYS.slice(),off:[],ver:'orig',useCustom:false,mode:'choice',rounds:10,time:20,start:'intro',autoReveal:true,teams:'第一組\n第二組\n第三組\n第四組',liveChoices:false,hostPlays:false};
 const S=Object.assign({},DEFAULTS,store.get('settings',{}));
 const saveS=()=>store.set('settings',S);
 let custom=store.get('custom',[]).filter(c=>c&&c.src&&c.url);
@@ -657,7 +667,7 @@ const saveCustom=()=>store.set('custom',custom.map(({loading,...c})=>c));
 function zsSong(i){const z=ZS[i];return{src:'zs',title:z[0],cat:z[1],file:z[2],piano:z[3],page:z[4]}}
 function buildPool(){
   const pool=[];
-  if(S.useZs)ZS.forEach((z,i)=>{if(!S.cats.includes(z[1])||S.off.includes(z[0]))return;if(S.ver==='piano'&&!z[3])return;pool.push(zsSong(i))});
+  if(S.useZs)ZS.forEach((z,i)=>{if((S.zsBy==='year'?!S.years.includes(yearKey(z[0])):!S.cats.includes(z[1]))||S.off.includes(z[0]))return;if(S.ver==='piano'&&!z[3])return;pool.push(zsSong(i))});
   if(S.useCustom)custom.forEach(c=>{const t=(c.title||'').trim();if(t&&!c.loading)pool.push({...c,title:t})});
   return pool;
 }
@@ -764,7 +774,9 @@ function setSeg(sel,v){$$(sel+' button').forEach(b=>b.setAttribute('aria-pressed
 function renderSetup(){
   $('#use-zs').checked=S.useZs;$('#zs-opts').classList.toggle('dim',!S.useZs);
   $('#cat-chips').innerHTML=Object.entries(CAT_NAME).map(([k,n])=>{const on=S.cats.includes(+k);const c=ZS.filter(z=>z[1]==k).length;return `<button type="button" class="chip ${on?'on':''}" data-cat="${k}" aria-pressed="${on}">${n}<small>${c}</small></button>`}).join('');
-  setSeg('#ver-seg',S.ver);setSeg('#mode-seg',S.mode);setSeg('#start-seg',S.start);
+  $('#year-chips').innerHTML=YEAR_KEYS.map(k=>{const on=S.years.includes(k);const c=ZS.filter(z=>yearKey(z[0])===k).length;return `<button type="button" class="chip ${on?'on':''}" data-year="${k}" aria-pressed="${on}">${yearLabel(k)}<small>${c}</small></button>`}).join('');
+  const byYear=S.zsBy==='year';$('#cat-field').hidden=byYear;$('#year-field').hidden=!byYear;
+  setSeg('#by-seg',S.zsBy);setSeg('#ver-seg',S.ver);setSeg('#mode-seg',S.mode);setSeg('#start-seg',S.start);
   $('#ver-desc').textContent=VER_DESC[S.ver];$('#mode-desc').textContent=MODE_DESC[S.mode];
   $('#rounds').value=String(S.rounds);$('#time').value=String(S.time);
   $('#auto-reveal').checked=S.autoReveal;$('#live-choices').checked=S.liveChoices;
@@ -776,7 +788,9 @@ function renderSetup(){
   renderZsList();renderCustom();renderPoolSum();
 }
 function renderZsList(){
-  $('#zs-list').innerHTML=Object.entries(CAT_NAME).map(([k,n])=>`<div class="zs-group"><h4>${n}</h4><div class="zs-songs">${ZS.map((z,i)=>z[1]==k?`<label class="zs-song"><input type="checkbox" data-zs="${i}" ${S.off.includes(z[0])?'':'checked'}><span>${esc(z[0])}</span>${z[3]?'<i class="pi" title="有鋼琴演奏版">鋼琴</i>':''}</label>`:'').join('')}</div></div>`).join('');
+  // 依目前的選歌方式分組：字部或年份（年份由新到舊）
+  const groups=S.zsBy==='year'?YEAR_KEYS.slice().reverse().map(k=>[yearLabel(k),z=>yearKey(z[0])===k]):Object.entries(CAT_NAME).map(([k,n])=>[n,z=>z[1]==k]);
+  $('#zs-list').innerHTML=groups.map(([n,test])=>`<div class="zs-group"><h4>${n}</h4><div class="zs-songs">${ZS.map((z,i)=>test(z)?`<label class="zs-song"><input type="checkbox" data-zs="${i}" ${S.off.includes(z[0])?'':'checked'}><span>${esc(z[0])}</span>${z[3]?'<i class="pi" title="有鋼琴演奏版">鋼琴</i>':''}</label>`:'').join('')}</div></div>`).join('');
 }
 function renderCustom(){
   $('#use-custom').checked=S.useCustom;$('#custom-opts').classList.toggle('dim',!S.useCustom);
@@ -810,6 +824,7 @@ function initSetup(){
   $('#use-zs').onchange=e=>{S.useZs=e.target.checked;saveS();renderSetup()};
   $('#use-custom').onchange=e=>{S.useCustom=e.target.checked;saveS();renderSetup()};
   $('#cat-chips').onclick=e=>{const b=e.target.closest('[data-cat]');if(!b)return;const k=+b.dataset.cat;S.cats=S.cats.includes(k)?S.cats.filter(x=>x!==k):[...S.cats,k];saveS();renderSetup()};
+  $('#year-chips').onclick=e=>{const b=e.target.closest('[data-year]');if(!b)return;const k=b.dataset.year;S.years=S.years.includes(k)?S.years.filter(x=>x!==k):[...S.years,k];saveS();renderSetup()};
   $$('.seg').forEach(seg=>{seg.onclick=e=>{const b=e.target.closest('button[data-v]');if(!b)return;S[seg.dataset.key]=b.dataset.v;saveS();renderSetup()}});
   $('#rounds').onchange=e=>{S.rounds=+e.target.value;saveS();renderPoolSum()};
   $('#time').onchange=e=>{S.time=+e.target.value;saveS();renderPoolSum()};
